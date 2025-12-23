@@ -79,6 +79,7 @@ logger = logging.getLogger("domino.ergms.weighted")
 # WCM solver (strength-only, geometric weights)
 # -----------------------------------------------------------------------------
 
+
 @njit(cache=True, fastmath=True)
 def _residuals_WCM_log(u: np.ndarray, s: np.ndarray) -> np.ndarray:
     """
@@ -170,8 +171,13 @@ def solve_WCM_iterative(
         Residual 2-norm at the best iterate.
     """
     if verbose:
-        logger.info("WCM: starting solve (method=%s, tol=%.1e, max_iter=%d, patience=%d)",
-                    method, tol, max_iter, patience)
+        logger.info(
+            "WCM: starting solve (method=%s, tol=%.1e, max_iter=%d, patience=%d)",
+            method,
+            tol,
+            max_iter,
+            patience,
+        )
 
     # Guard for logs
     z0 = np.log(np.maximum(x_init, EPS))
@@ -183,11 +189,19 @@ def solve_WCM_iterative(
     for it in range(max_iter):
         # One nonlinear step
         if method == "krylov":
-            u_curr = newton_krylov(lambda u: _residuals_WCM_log(u, s),
-                                   z0, method="lgmres", inner_maxiter=100)
+            u_curr = newton_krylov(
+                lambda u: _residuals_WCM_log(u, s),
+                z0,
+                method="lgmres",
+                inner_maxiter=100,
+            )
         else:
-            sol = root(lambda u: _residuals_WCM_log(u, s),
-                       x0=z0, method=method, options={"maxfev": 10000})
+            sol = root(
+                lambda u: _residuals_WCM_log(u, s),
+                x0=z0,
+                method=method,
+                options={"maxfev": 10000},
+            )
             u_curr = sol.x
 
         curr = np.linalg.norm(_residuals_WCM_log(u_curr, s))
@@ -201,8 +215,13 @@ def solve_WCM_iterative(
             no_improve += 1
 
         if verbose:
-            logger.info("WCM: iter=%d  ||res||=%.3e  best=%.3e  no_improve=%d",
-                        it + 1, curr, best_norm, no_improve)
+            logger.info(
+                "WCM: iter=%d  ||res||=%.3e  best=%.3e  no_improve=%d",
+                it + 1,
+                curr,
+                best_norm,
+                no_improve,
+            )
 
         # Stopping conditions
         if curr < tol:
@@ -211,11 +230,16 @@ def solve_WCM_iterative(
                 logger.info("WCM: converged at iter %d with ||res||=%.3e", it + 1, curr)
             break
         if no_improve >= patience:
-            logger.warning("WCM solver: stopping after %d no-improve iterations at iter %d.",
-                           patience, it + 1)
+            logger.warning(
+                "WCM solver: stopping after %d no-improve iterations at iter %d.",
+                patience,
+                it + 1,
+            )
             break
         if it == max_iter - 1:
-            logger.warning("WCM solver: maximum iterations reached before reaching convergence.")
+            logger.warning(
+                "WCM solver: maximum iterations reached before reaching convergence."
+            )
 
         # Warm start next step
         z0 = u_curr.copy()
@@ -226,6 +250,7 @@ def solve_WCM_iterative(
 # -----------------------------------------------------------------------------
 # weighted dcSBM residuals and solver
 # -----------------------------------------------------------------------------
+
 
 def _make_block_struct(c: np.ndarray):
     """
@@ -256,11 +281,11 @@ def _make_block_struct(c: np.ndarray):
 @njit(parallel=True, fastmath=True)
 def _residuals_wdcSBM_log(
     u: np.ndarray,
-    s: np.ndarray,            # observed strengths (N,)
-    c: np.ndarray,            # labels (N,)
-    L_obs: np.ndarray,        # block weight totals (R,R); upper-triangular semantics
+    s: np.ndarray,  # observed strengths (N,)
+    c: np.ndarray,  # labels (N,)
+    L_obs: np.ndarray,  # block weight totals (R,R); upper-triangular semantics
     block_pairs: np.ndarray,  # (M,2) unordered pairs r<=s
-    idx_map: np.ndarray       # (R,R) -> index in block_pairs
+    idx_map: np.ndarray,  # (R,R) -> index in block_pairs
 ) -> np.ndarray:
     """
     Weighted dcSBM residuals in log-parameter space with per-thread accumulators
@@ -280,7 +305,7 @@ def _residuals_wdcSBM_log(
     N = s.size
     M = block_pairs.shape[0]
 
-    x  = np.exp(u[:N])
+    x = np.exp(u[:N])
     ch = np.exp(u[N:])
 
     T = get_num_threads()
@@ -288,7 +313,7 @@ def _residuals_wdcSBM_log(
     blk_local = np.zeros((T, M))
 
     base = N // T
-    rem  = N % T
+    rem = N % T
 
     for t in prange(T):
         i0 = t * base + (t if t < rem else rem)
@@ -379,8 +404,13 @@ def solve_wdcSBM_iterative(
         Residual 2-norm at the best solution found.
     """
     if verbose:
-        logger.info("weighted dcSBM: starting solve (method=%s, tol=%.1e, max_iter=%d, patience=%d)",
-                    method, tol, max_iter, patience)
+        logger.info(
+            "weighted dcSBM: starting solve (method=%s, tol=%.1e, max_iter=%d, patience=%d)",
+            method,
+            tol,
+            max_iter,
+            patience,
+        )
 
     block_pairs, idx_map = _make_block_struct(c)
 
@@ -399,8 +429,9 @@ def solve_wdcSBM_iterative(
         if method == "newton":
             z_curr = newton_krylov(f_res, z0, method="lgmres", inner_maxiter=100)
         else:
-            sol = root(f_res, x0=z0, method=method, tol=tol,
-                       options={"maxfev": 100 * z0.size})
+            sol = root(
+                f_res, x0=z0, method=method, tol=tol, options={"maxfev": 100 * z0.size}
+            )
             z_curr = sol.x
 
         curr = np.linalg.norm(f_res(z_curr))
@@ -414,21 +445,35 @@ def solve_wdcSBM_iterative(
             no_improve += 1
 
         if verbose:
-            logger.info("weighted dcSBM: iter=%d  ||res||=%.3e  best=%.3e  no_improve=%d",
-                        it + 1, curr, best_norm, no_improve)
+            logger.info(
+                "weighted dcSBM: iter=%d  ||res||=%.3e  best=%.3e  no_improve=%d",
+                it + 1,
+                curr,
+                best_norm,
+                no_improve,
+            )
 
         # Stopping conditions
         if curr < tol:
             best_z = z_curr.copy()
             if verbose:
-                logger.info("weighted dcSBM: converged at iter %d with ||res||=%.3e", it + 1, curr)
+                logger.info(
+                    "weighted dcSBM: converged at iter %d with ||res||=%.3e",
+                    it + 1,
+                    curr,
+                )
             break
         if no_improve >= patience:
-            logger.warning("weighted dcSBM solver: stopped after %d no-improve at iter %d.",
-                           patience, it + 1)
+            logger.warning(
+                "weighted dcSBM solver: stopped after %d no-improve at iter %d.",
+                patience,
+                it + 1,
+            )
             break
         if it == max_iter - 1:
-            logger.warning("weighted dcSBM solver: maximum iterations reached before reaching convergence.")
+            logger.warning(
+                "weighted dcSBM solver: maximum iterations reached before reaching convergence."
+            )
 
         # Warm start next step
         z0 = z_curr.copy()

@@ -20,7 +20,9 @@ def test_detect_weighted_wsbm_small() -> None:
     """The weighted SBM pipeline should return a finite BIC and a valid partition."""
     inst = sbm_weighted(n=100)
     assert np.all(inst.A >= 0)
-    assert np.any(inst.A > 0), "Synthetic weighted instance must have at least one edge."
+    assert np.any(inst.A > 0), (
+        "Synthetic weighted instance must have at least one edge."
+    )
 
     part, bic = detect_communities(
         inst.G,

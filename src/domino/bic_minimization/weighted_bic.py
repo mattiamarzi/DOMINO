@@ -76,6 +76,7 @@ logger = logging.getLogger("domino.bic.weighted")
 N_THREADS = max(1, int(os.getenv("THREADS", os.cpu_count() or 1)))
 set_num_threads(N_THREADS)
 
+
 # -----------------------------------------------------------------------------
 # Utilities
 # -----------------------------------------------------------------------------
@@ -86,6 +87,7 @@ def _part2dict(part: Partition) -> Dict[int, int]:
         for v in block:
             mapping[v] = cid
     return mapping
+
 
 # ---- Weighted block sums L_obs (upper triangle semantics) -------------------
 def _build_L_obs_weighted(A: np.ndarray, c: np.ndarray) -> np.ndarray:
@@ -108,7 +110,7 @@ def _build_L_obs_weighted(A: np.ndarray, c: np.ndarray) -> np.ndarray:
     w = w[nz]
     ci = c[iu]
     cj = c[ju]
-    same = (ci == cj)
+    same = ci == cj
     if np.any(same):
         np.add.at(L, (ci[same], cj[same]), w[same])  # ci==cj → diagonal
     diff = ~same
@@ -117,10 +119,12 @@ def _build_L_obs_weighted(A: np.ndarray, c: np.ndarray) -> np.ndarray:
         np.add.at(L, (cj[diff], ci[diff]), w[diff])
     return L
 
+
 # -----------------------------------------------------------------------------
 # Target-K greedy enforcement under wSBM
 #   (merge-only, identical structure to binary, but using weight totals)
 # -----------------------------------------------------------------------------
+
 
 @njit(cache=True, fastmath=True)
 def _ll_pair_wgeom(L_rs: float, M_rs: int) -> float:
@@ -138,6 +142,7 @@ def _ll_pair_wgeom(L_rs: float, M_rs: int) -> float:
         z = Z_MIN
     return L_rs * math.log(z) - (L_rs + M_rs) * math.log(1.0 + z)
 
+
 @njit(cache=True, fastmath=True)
 def _delta_ll_merge_wsbm(L: np.ndarray, n: np.ndarray, r: int, s: int) -> float:
     """
@@ -147,8 +152,11 @@ def _delta_ll_merge_wsbm(L: np.ndarray, n: np.ndarray, r: int, s: int) -> float:
     B = n.size
     nr, ns = int(n[r]), int(n[s])
 
-    def M_rr(nr_): return nr_ * (nr_ - 1) // 2
-    def M_rs(nr_, ns_): return nr_ * ns_
+    def M_rr(nr_):
+        return nr_ * (nr_ - 1) // 2
+
+    def M_rs(nr_, ns_):
+        return nr_ * ns_
 
     ll_old = 0.0
     ll_old += _ll_pair_wgeom(L[r, r], M_rr(nr))
@@ -172,8 +180,11 @@ def _delta_ll_merge_wsbm(L: np.ndarray, n: np.ndarray, r: int, s: int) -> float:
 
     return ll_new - ll_old
 
+
 @njit(cache=True, fastmath=True)
-def _delta_bic_merge_wsbm(L: np.ndarray, n: np.ndarray, r: int, s: int, N: int) -> float:
+def _delta_bic_merge_wsbm(
+    L: np.ndarray, n: np.ndarray, r: int, s: int, N: int
+) -> float:
     """
     ΔBIC when merging (r,s) under wSBM:
       parameters k = B(B+1)/2 ⇒   Δk = −B
@@ -182,8 +193,9 @@ def _delta_bic_merge_wsbm(L: np.ndarray, n: np.ndarray, r: int, s: int, N: int) 
     B = n.size
     V = N * (N - 1) / 2.0
     delta_pen = -B * math.log(V)
-    delta_ll  = _delta_ll_merge_wsbm(L, n, r, s)
+    delta_ll = _delta_ll_merge_wsbm(L, n, r, s)
     return delta_pen - 2.0 * delta_ll
+
 
 def _init_block_stats_from_partition_weighted(A: np.ndarray, part: Partition):
     """
@@ -211,6 +223,7 @@ def _init_block_stats_from_partition_weighted(A: np.ndarray, part: Partition):
                 L[r, s] = L[s, r] = val
     return L, n
 
+
 def _apply_merge_update_stats_weighted(L: np.ndarray, n: np.ndarray, r: int, s: int):
     """
     Update (L, n) after merging s into r (and dropping s).
@@ -221,7 +234,7 @@ def _apply_merge_update_stats_weighted(L: np.ndarray, n: np.ndarray, r: int, s: 
         if q == r or q == s:
             continue
         L[r, q] += L[s, q]
-        L[q, r]  = L[r, q]
+        L[q, r] = L[r, q]
     L[r, r] = L_rr_new
 
     L = np.delete(L, s, axis=0)
@@ -229,6 +242,7 @@ def _apply_merge_update_stats_weighted(L: np.ndarray, n: np.ndarray, r: int, s: 
     n[r] = n[r] + n[s]
     n = np.delete(n, s)
     return L, n
+
 
 @njit(cache=True, fastmath=True)
 def _best_merge_pair_wsbm(L: np.ndarray, n: np.ndarray, N: int):
@@ -242,6 +256,7 @@ def _best_merge_pair_wsbm(L: np.ndarray, n: np.ndarray, N: int):
                 best_delta = d
                 best_i, best_j = i, j
     return best_i, best_j, best_delta
+
 
 def _enforce_target_K_wSBM(part: Partition, A: np.ndarray, K_target: int) -> Partition:
     """
@@ -262,6 +277,7 @@ def _enforce_target_K_wSBM(part: Partition, A: np.ndarray, K_target: int) -> Par
         L, n = _apply_merge_update_stats_weighted(L, n, i, j)
 
     return part
+
 
 # -----------------------------------------------------------------------------
 # Exact target-K enforcement (split + merge), mirroring signed/binary modules
@@ -363,6 +379,7 @@ def _split_largest_community_with_leiden_wSBM(
     new_part = Partition.from_partition(G, blocks_new)
     return new_part.flatten()
 
+
 def _enforce_target_K_exact_wSBM(
     part: Partition,
     G: nx.Graph,
@@ -423,9 +440,11 @@ def _enforce_target_K_exact_wSBM(
 
     return part
 
+
 # -----------------------------------------------------------------------------
 # wSBM: log-likelihood and BIC
 # -----------------------------------------------------------------------------
+
 
 @njit(cache=True, fastmath=True)
 def _wsbm_loglik(A: np.ndarray, comm: np.ndarray, com_sizes: np.ndarray) -> float:
@@ -468,6 +487,7 @@ def _wsbm_loglik(A: np.ndarray, comm: np.ndarray, com_sizes: np.ndarray) -> floa
                 ll += L[r, s] * math.log(z) - (L[r, s] + Mrs) * math.log(1.0 + z)
     return ll
 
+
 def _bic_wsbm(A: np.ndarray, comm_dict: Dict[int, int]) -> float:
     """
     BIC for geometric wSBM:
@@ -485,16 +505,21 @@ def _bic_wsbm(A: np.ndarray, comm_dict: Dict[int, int]) -> float:
     V = N * (N - 1) / 2.0
     return k * math.log(V) - 2.0 * logL
 
+
 class Weighted_SBM_BIC_Quality:
     """Leiden quality = −BIC for the geometric wSBM."""
+
     def __init__(self, A: np.ndarray):
         self.A = A
+
     def __call__(self, part):
         return -_bic_wsbm(self.A, _part2dict(part.flatten()))
+
     def delta(self, part, v, target):
         old = self.__call__(part)
         new = copy(part).move_node(v, target)
         return self.__call__(new) - old
+
 
 def leiden_weighted_sbm(
     G: nx.Graph,
@@ -504,14 +529,22 @@ def leiden_weighted_sbm(
     theta: float = 0.3,
     gamma: float = 0.0,
     random_state: Optional[Union[int, np.random.Generator, random.Random]] = None,
-    verbose: int | bool = False
+    verbose: int | bool = False,
 ):
     """One Leiden pass maximizing −BIC for geometric wSBM."""
     if verbose:
         configure_logging(verbose=bool(verbose))
         logger.info("Leiden (wSBM): pass start (theta=%.3f, gamma=%.3f)", theta, gamma)
-    return LeidenEngine.run(G, Weighted_SBM_BIC_Quality(A), initial, theta, gamma,
-                            random_state=random_state, verbose=verbose)
+    return LeidenEngine.run(
+        G,
+        Weighted_SBM_BIC_Quality(A),
+        initial,
+        theta,
+        gamma,
+        random_state=random_state,
+        verbose=verbose,
+    )
+
 
 def iterative_leiden_wSBM(
     G: nx.Graph,
@@ -531,8 +564,12 @@ def iterative_leiden_wSBM(
     """
     if verbose:
         configure_logging(verbose=bool(verbose))
-        logger.info("iterative_leiden_wSBM: start (max_outer=%d, macro=%s, target_K=%s)",
-                    max_outer, do_macro_merge, str(target_K))
+        logger.info(
+            "iterative_leiden_wSBM: start (max_outer=%d, macro=%s, target_K=%s)",
+            max_outer,
+            do_macro_merge,
+            str(target_K),
+        )
 
     qf = Weighted_SBM_BIC_Quality(A)
 
@@ -540,9 +577,15 @@ def iterative_leiden_wSBM(
     if initial_partition is not None:
         init_flat = Partition.from_partition(G, initial_partition).flatten()
 
-    part = leiden_weighted_sbm(G, A,
-                               initial=initial_partition, theta=theta, gamma=gamma,
-                               random_state=random_state, verbose=verbose)
+    part = leiden_weighted_sbm(
+        G,
+        A,
+        initial=initial_partition,
+        theta=theta,
+        gamma=gamma,
+        random_state=random_state,
+        verbose=verbose,
+    )
     if do_macro_merge:
         part = macro_merge_partition(part, qf)
     if target_K is not None:
@@ -555,11 +598,14 @@ def iterative_leiden_wSBM(
         bic0 = _bic_wsbm(A, _part2dict(flat))
         print("[wSBM] Early stop: partition unchanged after first pass.")
         if verbose:
-            logger.info("[wSBM] Early stop: partition unchanged after first pass (BIC=%.2f).", bic0)
+            logger.info(
+                "[wSBM] Early stop: partition unchanged after first pass (BIC=%.2f).",
+                bic0,
+            )
         return copy(flat), bic0
 
     best_part = copy(flat)
-    best_bic  = _bic_wsbm(A, _part2dict(flat))
+    best_bic = _bic_wsbm(A, _part2dict(flat))
 
     for it in range(1, max_outer + 1):
         msg = f"[wSBM] iter {it}: BIC={best_bic:.2f}, communities={len(flat)}"
@@ -567,8 +613,15 @@ def iterative_leiden_wSBM(
         if verbose:
             logger.info(msg)
 
-        nxt = leiden_weighted_sbm(G, A, initial=flat, theta=theta, gamma=gamma,
-                                  random_state=random_state, verbose=verbose)
+        nxt = leiden_weighted_sbm(
+            G,
+            A,
+            initial=flat,
+            theta=theta,
+            gamma=gamma,
+            random_state=random_state,
+            verbose=verbose,
+        )
         if do_macro_merge:
             nxt = macro_merge_partition(nxt, qf)
         if target_K is not None:
@@ -590,12 +643,16 @@ def iterative_leiden_wSBM(
 
     return best_part, best_bic
 
+
 # -----------------------------------------------------------------------------
 # weighted dcSBM: log-likelihood, χ from fixed x, BIC, Leiden loop
 # -----------------------------------------------------------------------------
 
+
 @njit(cache=True, fastmath=True)
-def _w_dc_loglik(A: np.ndarray, xs: np.ndarray, comm: np.ndarray, chi: np.ndarray) -> float:
+def _w_dc_loglik(
+    A: np.ndarray, xs: np.ndarray, comm: np.ndarray, chi: np.ndarray
+) -> float:
     """
     Geometric weighted dcSBM log-likelihood:
       log L = ∑_{i<j} [ w_ij log z_ij − (w_ij + 1) log(1 + z_ij) ],
@@ -616,7 +673,10 @@ def _w_dc_loglik(A: np.ndarray, xs: np.ndarray, comm: np.ndarray, chi: np.ndarra
                 ll += w * math.log(z) - (w + 1.0) * math.log(1.0 + z)
     return ll
 
-def _chi_from_partition_and_x_weighted(A: np.ndarray, c: np.ndarray, xs: np.ndarray) -> np.ndarray:
+
+def _chi_from_partition_and_x_weighted(
+    A: np.ndarray, c: np.ndarray, xs: np.ndarray
+) -> np.ndarray:
     """
     With geometric weights, χ_{rs} has a *closed form* given x and c:
 
@@ -629,8 +689,8 @@ def _chi_from_partition_and_x_weighted(A: np.ndarray, c: np.ndarray, xs: np.ndar
     R = int(c.max()) + 1
 
     # ---- S_rs via per-community sums (O(N + R^2))
-    sum_x  = np.bincount(c, weights=xs,        minlength=R)
-    sum_x2 = np.bincount(c, weights=xs * xs,   minlength=R)
+    sum_x = np.bincount(c, weights=xs, minlength=R)
+    sum_x2 = np.bincount(c, weights=xs * xs, minlength=R)
 
     # Off-diagonals: outer product
     S = sum_x[:, None] * sum_x[None, :]
@@ -647,7 +707,13 @@ def _chi_from_partition_and_x_weighted(A: np.ndarray, c: np.ndarray, xs: np.ndar
     chi[nz] = L[nz] / S[nz]
     return chi
 
-def _bic_w_dcSBM(A: np.ndarray, xs: np.ndarray, comm_dict: Dict[int, int], chi: Optional[np.ndarray] = None) -> float:
+
+def _bic_w_dcSBM(
+    A: np.ndarray,
+    xs: np.ndarray,
+    comm_dict: Dict[int, int],
+    chi: Optional[np.ndarray] = None,
+) -> float:
     """
     BIC for geometric weighted dcSBM:
       kappa = N + B(B+1)/2,   V = N(N−1)/2,   BIC = kappa log V − 2 log L.
@@ -666,16 +732,21 @@ def _bic_w_dcSBM(A: np.ndarray, xs: np.ndarray, comm_dict: Dict[int, int], chi: 
     V = N * (N - 1) / 2.0
     return kappa * math.log(V) - 2.0 * logL
 
+
 class Weighted_DC_BIC_Quality:
     """Leiden quality = −BIC for the geometric weighted dcSBM."""
+
     def __init__(self, A: np.ndarray, xs: np.ndarray):
         self.A, self.xs = A, xs
+
     def __call__(self, part):
         return -_bic_w_dcSBM(self.A, self.xs, _part2dict(part.flatten()))
+
     def delta(self, part, v, target):
         old = self.__call__(part)
         new = copy(part).move_node(v, target)
         return self.__call__(new) - old
+
 
 def leiden_weighted_dcSBM(
     G: nx.Graph,
@@ -686,14 +757,24 @@ def leiden_weighted_dcSBM(
     theta: float = 0.3,
     gamma: float = 0.0,
     random_state: Optional[Union[int, np.random.Generator, random.Random]] = None,
-    verbose: int | bool = False
+    verbose: int | bool = False,
 ):
     """One Leiden pass maximizing −BIC for the weighted dcSBM."""
     if verbose:
         configure_logging(verbose=bool(verbose))
-        logger.info("Leiden (wdcSBM): pass start (theta=%.3f, gamma=%.3f)", theta, gamma)
-    return LeidenEngine.run(G, Weighted_DC_BIC_Quality(A, xs), initial, theta, gamma,
-                            random_state=random_state, verbose=verbose)
+        logger.info(
+            "Leiden (wdcSBM): pass start (theta=%.3f, gamma=%.3f)", theta, gamma
+        )
+    return LeidenEngine.run(
+        G,
+        Weighted_DC_BIC_Quality(A, xs),
+        initial,
+        theta,
+        gamma,
+        random_state=random_state,
+        verbose=verbose,
+    )
+
 
 def iterative_leiden_wdcSBM(
     G: nx.Graph,
@@ -719,10 +800,15 @@ def iterative_leiden_wdcSBM(
     """
     if verbose:
         configure_logging(verbose=bool(verbose))
-        logger.info("iterative_leiden_wdcSBM: start (max_outer=%d, macro=%s, target_K=%s, fix_x_wcm=%s)",
-                    max_outer, do_macro_merge, str(target_K), fix_x_wcm)
+        logger.info(
+            "iterative_leiden_wdcSBM: start (max_outer=%d, macro=%s, target_K=%s, fix_x_wcm=%s)",
+            max_outer,
+            do_macro_merge,
+            str(target_K),
+            fix_x_wcm,
+        )
 
-    s = A.sum(axis=1)            # node strengths
+    s = A.sum(axis=1)  # node strengths
     W_total = A.sum() / 2.0
 
     # Initial WCM solve (used both paths; fixed-x path freezes it)
@@ -730,10 +816,17 @@ def iterative_leiden_wdcSBM(
     xs, _ = solve_WCM_iterative(s, x0)
 
     # First Leiden pass
-    qf   = Weighted_DC_BIC_Quality(A, xs)
-    part = leiden_weighted_dcSBM(G, A, xs,
-                                 initial=initial_partition, theta=theta, gamma=gamma,
-                                 random_state=random_state, verbose=verbose)
+    qf = Weighted_DC_BIC_Quality(A, xs)
+    part = leiden_weighted_dcSBM(
+        G,
+        A,
+        xs,
+        initial=initial_partition,
+        theta=theta,
+        gamma=gamma,
+        random_state=random_state,
+        verbose=verbose,
+    )
     if do_macro_merge:
         part = macro_merge_partition(part, qf)
     if target_K is not None:
@@ -754,11 +847,14 @@ def iterative_leiden_wdcSBM(
             bic0 = _bic_w_dcSBM(A, xs, _part2dict(flat), chi)
             print("[wdcSBM] Early stop: partition unchanged after first pass.")
             if verbose:
-                logger.info("[wdcSBM] Early stop: partition unchanged after first pass (BIC=%.2f).", bic0)
+                logger.info(
+                    "[wdcSBM] Early stop: partition unchanged after first pass (BIC=%.2f).",
+                    bic0,
+                )
             return copy(flat), bic0
 
     best_part = None
-    best_bic  = float("inf")
+    best_bic = float("inf")
 
     for it in range(1, max_outer + 1):
         # labels
@@ -776,16 +872,20 @@ def iterative_leiden_wdcSBM(
             L_obs = _build_L_obs_weighted(A, c)
             R = c.max() + 1
             M = R * (R + 1) // 2
-            u0 = np.concatenate([
-                np.maximum(xs, EPS),
-                np.ones(M)
-            ])
+            u0 = np.concatenate([np.maximum(xs, EPS), np.ones(M)])
             u_opt, _ = solve_wdcSBM_iterative(
-                s=s, c=c, L_obs=L_obs, u_init=u0, method="lm",
-                tol=TOL_WDCSBM, max_iter=MAX_IT_DEFAULT, patience=PATIENCE_DEFAULT, verbose=False
+                s=s,
+                c=c,
+                L_obs=L_obs,
+                u_init=u0,
+                method="lm",
+                tol=TOL_WDCSBM,
+                max_iter=MAX_IT_DEFAULT,
+                patience=PATIENCE_DEFAULT,
+                verbose=False,
             )
-            xs_ref = u_opt[:A.shape[0]]
-            chi_flat = u_opt[A.shape[0]:]
+            xs_ref = u_opt[: A.shape[0]]
+            chi_flat = u_opt[A.shape[0] :]
             chi = np.zeros((R, R))
             idx = 0
             for r in range(R):
@@ -801,10 +901,17 @@ def iterative_leiden_wdcSBM(
         if verbose:
             logger.info(msg)
 
-        qf        = Weighted_DC_BIC_Quality(A, xs_ref)
-        part_next = leiden_weighted_dcSBM(G, A, xs_ref,
-                                          initial=flat, theta=theta, gamma=gamma,
-                                          random_state=random_state, verbose=verbose)
+        qf = Weighted_DC_BIC_Quality(A, xs_ref)
+        part_next = leiden_weighted_dcSBM(
+            G,
+            A,
+            xs_ref,
+            initial=flat,
+            theta=theta,
+            gamma=gamma,
+            random_state=random_state,
+            verbose=verbose,
+        )
         if do_macro_merge:
             part_next = macro_merge_partition(part_next, qf)
         if target_K is not None:
@@ -820,7 +927,7 @@ def iterative_leiden_wdcSBM(
             break
 
         flat = flat_next
-        xs   = xs_ref
+        xs = xs_ref
 
     # --- Post-hoc exact BIC (when x was frozen) -----------------------------
     if fix_x_wcm and best_part is not None:
@@ -833,18 +940,22 @@ def iterative_leiden_wdcSBM(
         L_obs = _build_L_obs_weighted(A, c)
         R = c.max() + 1
         M = R * (R + 1) // 2
-        u0 = np.concatenate([
-            np.maximum(xs, EPS),
-            np.ones(M)
-        ])
+        u0 = np.concatenate([np.maximum(xs, EPS), np.ones(M)])
 
         tol_solver = TOL_WDCSBM
         u_opt, best_norm = solve_wdcSBM_iterative(
-            s=s, c=c, L_obs=L_obs, u_init=u0, method="lm",
-            tol=tol_solver, max_iter=MAX_IT_DEFAULT, patience=PATIENCE_DEFAULT, verbose=False
+            s=s,
+            c=c,
+            L_obs=L_obs,
+            u_init=u0,
+            method="lm",
+            tol=tol_solver,
+            max_iter=MAX_IT_DEFAULT,
+            patience=PATIENCE_DEFAULT,
+            verbose=False,
         )
         if best_norm < tol_solver:
-            x_hat = u_opt[:A.shape[0]]
+            x_hat = u_opt[: A.shape[0]]
             chi_hat = np.zeros((R, R))
             idx = 0
             for r in range(R):
@@ -854,12 +965,19 @@ def iterative_leiden_wdcSBM(
             true_bic = _bic_w_dcSBM(A, x_hat, _part2dict(flat_final), chi_hat)
             print(f"[wdcSBM] Post-hoc full-parameter BIC (exact): {true_bic:.2f}")
             if verbose:
-                logger.info("[wdcSBM] Post-hoc full-parameter BIC (exact): %.2f", true_bic)
+                logger.info(
+                    "[wdcSBM] Post-hoc full-parameter BIC (exact): %.2f", true_bic
+                )
             best_bic = true_bic
         else:
-            print(f"[wdcSBM] Post-hoc solver did not converge "
-                  f"Keeping fixed-x BIC={best_bic:.2f}.")
+            print(
+                f"[wdcSBM] Post-hoc solver did not converge "
+                f"Keeping fixed-x BIC={best_bic:.2f}."
+            )
             if verbose:
-                logger.warning("[wdcSBM] Post-hoc solver did not converge; keeping fixed-x BIC=%.2f.", best_bic)
+                logger.warning(
+                    "[wdcSBM] Post-hoc solver did not converge; keeping fixed-x BIC=%.2f.",
+                    best_bic,
+                )
 
     return best_part if best_part is not None else flat, best_bic

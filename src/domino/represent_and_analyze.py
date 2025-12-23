@@ -32,6 +32,7 @@ logger = logging.getLogger("domino.viz")
 # Basic conversion and relabeling
 # -----------------------------------------------------------------------------
 
+
 def partition_to_dict(part: Iterable[Iterable[Any]]) -> Dict[Any, int]:
     """
     Convert a Partition-like object into a mapping {node: community_id}.
@@ -155,6 +156,7 @@ def connectivity_info_string(
 # Layout helpers
 # -----------------------------------------------------------------------------
 
+
 def _to_nx_seed(obj: Any, default: int = 42) -> Any:
     """
     Convert a random-state-like object into a NetworkX-compatible seed.
@@ -194,7 +196,9 @@ def community_layout(
     if pos is not None:
         return pos
 
-    seed_for_nx = _to_nx_seed(random_state if random_state is not None else seed, default=seed)
+    seed_for_nx = _to_nx_seed(
+        random_state if random_state is not None else seed, default=seed
+    )
 
     comm_to_nodes: Dict[int, List[Any]] = {}
     for n, c in labels.items():
@@ -214,7 +218,9 @@ def community_layout(
     return out
 
 
-def kshell_layout(G: nx.Graph, shell_gap: float = 1.5) -> Dict[Any, Tuple[float, float]]:
+def kshell_layout(
+    G: nx.Graph, shell_gap: float = 1.5
+) -> Dict[Any, Tuple[float, float]]:
     """
     Deterministic k-shell radial layout, higher core number nodes are closer to the origin.
     """
@@ -238,7 +244,10 @@ def kshell_layout(G: nx.Graph, shell_gap: float = 1.5) -> Dict[Any, Tuple[float,
 # Visualization helpers (robust defaults)
 # -----------------------------------------------------------------------------
 
-def _auto_figsize(n: int, base: float = 6.0, max_side: float = 12.0) -> Tuple[float, float]:
+
+def _auto_figsize(
+    n: int, base: float = 6.0, max_side: float = 12.0
+) -> Tuple[float, float]:
     """
     Choose a square figure size that scales mildly with n and saturates.
     """
@@ -295,10 +304,14 @@ def _graph_to_binary_sparse(G: nx.Graph, nodes: List[Any]) -> sparse.csr_matrix:
     Return a binary (0/1) sparse adjacency matrix for G in the given node order.
     """
     try:
-        A = nx.to_scipy_sparse_array(G, nodelist=nodes, weight=None, format="csr", dtype=np.int8)
+        A = nx.to_scipy_sparse_array(
+            G, nodelist=nodes, weight=None, format="csr", dtype=np.int8
+        )
         return sparse.csr_matrix(A)
     except Exception:
-        A = nx.to_scipy_sparse_matrix(G, nodelist=nodes, weight=None, format="csr", dtype=np.int8)
+        A = nx.to_scipy_sparse_matrix(
+            G, nodelist=nodes, weight=None, format="csr", dtype=np.int8
+        )
         return A.tocsr()
 
 
@@ -358,7 +371,11 @@ def visualize_communities(
         colors = predefined_colors
 
     if n > max_layout_nodes:
-        logger.info("Skipping network layout and drawing (n=%d exceeds max_layout_nodes=%d).", n, max_layout_nodes)
+        logger.info(
+            "Skipping network layout and drawing (n=%d exceeds max_layout_nodes=%d).",
+            n,
+            max_layout_nodes,
+        )
         return colors, None
 
     if pos is None:
@@ -382,7 +399,11 @@ def visualize_communities(
         lw = _auto_linewidth(n)
         nx.draw_networkx_edges(G, pos, alpha=0.25, width=lw, ax=ax)
     else:
-        logger.info("Skipping edge rendering (m=%d exceeds max_draw_edges=%d).", m, max_draw_edges)
+        logger.info(
+            "Skipping edge rendering (m=%d exceeds max_draw_edges=%d).",
+            m,
+            max_draw_edges,
+        )
 
     ax.set_axis_off()
 
@@ -431,7 +452,11 @@ def visualize_signed_communities(
         colors = predefined_colors
 
     if n > max_layout_nodes:
-        logger.info("Skipping signed network layout and drawing (n=%d exceeds max_layout_nodes=%d).", n, max_layout_nodes)
+        logger.info(
+            "Skipping signed network layout and drawing (n=%d exceeds max_layout_nodes=%d).",
+            n,
+            max_layout_nodes,
+        )
         return colors, None
 
     if pos is None:
@@ -457,11 +482,31 @@ def visualize_signed_communities(
         neg_edges = [(u, v) for u, v in G.edges() if int(Aneg[u, v]) == 1]
 
         if pos_edges:
-            nx.draw_networkx_edges(G, pos, edgelist=pos_edges, alpha=0.20, width=lw, edge_color="blue", ax=ax)
+            nx.draw_networkx_edges(
+                G,
+                pos,
+                edgelist=pos_edges,
+                alpha=0.20,
+                width=lw,
+                edge_color="blue",
+                ax=ax,
+            )
         if neg_edges:
-            nx.draw_networkx_edges(G, pos, edgelist=neg_edges, alpha=0.30, width=lw, edge_color="crimson", ax=ax)
+            nx.draw_networkx_edges(
+                G,
+                pos,
+                edgelist=neg_edges,
+                alpha=0.30,
+                width=lw,
+                edge_color="crimson",
+                ax=ax,
+            )
     else:
-        logger.info("Skipping signed edge rendering (m=%d exceeds max_draw_edges=%d).", m, max_draw_edges)
+        logger.info(
+            "Skipping signed edge rendering (m=%d exceeds max_draw_edges=%d).",
+            m,
+            max_draw_edges,
+        )
 
     ax.set_axis_off()
 
@@ -545,10 +590,17 @@ def plot_reordered_adjacency_matrix_by_connectivity(
 
     spans = _block_spans_from_labels(comm_ord)
     for a, b in spans:
-        rect = Rectangle((a - 0.5, a - 0.5), b - a, b - a, fill=False, edgecolor="k", linewidth=block_lw)
+        rect = Rectangle(
+            (a - 0.5, a - 0.5),
+            b - a,
+            b - a,
+            fill=False,
+            edgecolor="k",
+            linewidth=block_lw,
+        )
         ax.add_patch(rect)
 
-    #ax.set_title("Reordered adjacency (by community)")
+    # ax.set_title("Reordered adjacency (by community)")
     fig.tight_layout()
     _safe_savefig(fig, savepath, dpi=dpi)
     if show:
@@ -595,6 +647,7 @@ def plot_reordered_signed_adjacency(
     if n <= max_n_dense:
         M = S_ord.toarray()
         from matplotlib.colors import BoundaryNorm, ListedColormap
+
         cmap = ListedColormap(["#d62728", "white", "#1f77b4"])
         norm = BoundaryNorm([-1.5, -0.5, 0.5, 1.5], cmap.N)
         ax.imshow(M, interpolation="nearest", aspect="equal", cmap=cmap, norm=norm)
@@ -610,7 +663,14 @@ def plot_reordered_signed_adjacency(
 
     spans = _block_spans_from_labels(comm_ord)
     for a, b in spans:
-        rect = Rectangle((a - 0.5, a - 0.5), b - a, b - a, fill=False, edgecolor="k", linewidth=block_lw)
+        rect = Rectangle(
+            (a - 0.5, a - 0.5),
+            b - a,
+            b - a,
+            fill=False,
+            edgecolor="k",
+            linewidth=block_lw,
+        )
         ax.add_patch(rect)
 
     ax.set_title("Reordered signed adjacency (by community)")
@@ -626,6 +686,7 @@ def plot_reordered_signed_adjacency(
 # -----------------------------------------------------------------------------
 # Analysis helpers
 # -----------------------------------------------------------------------------
+
 
 def community_block_matrix(G: nx.Graph, labels: Dict[Any, int]) -> np.ndarray:
     """
@@ -720,7 +781,9 @@ def analyze_communities(
         print("\nCommunity block matrix (reordered by avg degree desc):")
         print(B_ord)
     else:
-        print(f"\nCommunity block matrix not printed (K={k} exceeds max_print_k={max_print_k}).")
+        print(
+            f"\nCommunity block matrix not printed (K={k} exceeds max_print_k={max_print_k})."
+        )
 
     if (Apos is not None) and (Aneg is not None):
         avg_pos, avg_neg = average_signed_degree_by_community(Apos, Aneg, labels)
@@ -739,10 +802,14 @@ def analyze_communities(
     print("\nCommunity members:")
     for new, old in enumerate(order):
         mlist = sorted(members.get(old, []))
-        display = [node_names[n] if (node_names and n in node_names) else n for n in mlist]
+        display = [
+            node_names[n] if (node_names and n in node_names) else n for n in mlist
+        ]
         if len(display) > max_members_per_comm:
             head = display[:max_members_per_comm]
-            print(f"Community {new} (size={len(display)}), first {max_members_per_comm} members:")
+            print(
+                f"Community {new} (size={len(display)}), first {max_members_per_comm} members:"
+            )
             print(", ".join(map(str, head)) + ", ...")
         else:
             print(f"Community {new} (size={len(display)}):")
@@ -753,6 +820,7 @@ def analyze_communities(
 # -----------------------------------------------------------------------------
 # Pipeline: process_graph
 # -----------------------------------------------------------------------------
+
 
 def process_graph(
     G: nx.Graph,
@@ -805,7 +873,9 @@ def process_graph(
 
     nodes = sorted(G.nodes())
     A_bin = _graph_to_binary_sparse(G, nodes)
-    final_labels, sorted_conn = rename_communities_by_connectivity_standard(A_bin, contig)
+    final_labels, sorted_conn = rename_communities_by_connectivity_standard(
+        A_bin, contig
+    )
 
     out: Dict[str, Any] = {
         "labels": final_labels,

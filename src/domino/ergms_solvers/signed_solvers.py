@@ -57,6 +57,7 @@ warnings.simplefilter("ignore", OptimizeWarning)
 # Module-level logger (configure handlers/level once in your application)
 logger = logging.getLogger("domino.ergms.signed")
 
+
 # ---------------------------------------------------------------------------
 # Helper: block-pair structure (same semantics as in the binary solvers)
 # ---------------------------------------------------------------------------
@@ -91,10 +92,11 @@ def _make_block_struct(c: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
 # 1) Signed UBCM-equivalent (SCM): node-only +/− factors
 # ===========================================================================
 
+
 @njit(cache=True, fastmath=True)
-def _residuals_SCM_log(u: np.ndarray,
-                       k_plus: np.ndarray,
-                       k_minus: np.ndarray) -> np.ndarray:
+def _residuals_SCM_log(
+    u: np.ndarray, k_plus: np.ndarray, k_minus: np.ndarray
+) -> np.ndarray:
     """
     SCM residuals in log-space (x^+ = exp(u[:N]), x^- = exp(u[N:])).
     No NxN matrix is allocated; computation is O(N^2) with tight loops.
@@ -118,8 +120,8 @@ def _residuals_SCM_log(u: np.ndarray,
         Residual vector (expected minus observed).
     """
     N = k_plus.size
-    xp = np.exp(u[:N])      # x^+ (positive layer)
-    xm = np.exp(u[N:2*N])   # x^- (negative layer)
+    xp = np.exp(u[:N])  # x^+ (positive layer)
+    xm = np.exp(u[N : 2 * N])  # x^- (negative layer)
 
     res = np.empty(2 * N)
     for i in range(N):
@@ -133,8 +135,8 @@ def _residuals_SCM_log(u: np.ndarray,
             denom = 1.0 + xpi * xp[j] + xmi * xm[j]
             sp += (xpi * xp[j]) / denom
             sm += (xmi * xm[j]) / denom
-        res[i]      = sp - k_plus[i]
-        res[N + i]  = sm - k_minus[i]
+        res[i] = sp - k_plus[i]
+        res[N + i] = sm - k_minus[i]
     return res
 
 
@@ -180,15 +182,22 @@ def solve_SCM_iterative(
         Residual 2-norm at the best iterate.
     """
     if verbose:
-        logger.info("SCM: starting solve (method=%s, tol=%.1e, max_iter=%d, patience=%d)",
-                    method, tol, max_iter, patience)
+        logger.info(
+            "SCM: starting solve (method=%s, tol=%.1e, max_iter=%d, patience=%d)",
+            method,
+            tol,
+            max_iter,
+            patience,
+        )
 
     N = k_plus.size
     # Guarded initialization to keep logs finite
-    z0 = np.concatenate([
-        np.log(np.maximum(x_plus_init,  EPS)),
-        np.log(np.maximum(x_minus_init, EPS)),
-    ])
+    z0 = np.concatenate(
+        [
+            np.log(np.maximum(x_plus_init, EPS)),
+            np.log(np.maximum(x_minus_init, EPS)),
+        ]
+    )
 
     best_u = z0.copy()
     best_norm = np.linalg.norm(_residuals_SCM_log(best_u, k_plus, k_minus))
@@ -197,11 +206,19 @@ def solve_SCM_iterative(
     for it in range(max_iter):
         # One nonlinear step
         if method == "krylov":
-            u_curr = newton_krylov(lambda uu: _residuals_SCM_log(uu, k_plus, k_minus),
-                                   z0, method="lgmres", inner_maxiter=100)
+            u_curr = newton_krylov(
+                lambda uu: _residuals_SCM_log(uu, k_plus, k_minus),
+                z0,
+                method="lgmres",
+                inner_maxiter=100,
+            )
         else:
-            sol = root(lambda uu: _residuals_SCM_log(uu, k_plus, k_minus),
-                       x0=z0, method=method, options={"maxfev": 10000})
+            sol = root(
+                lambda uu: _residuals_SCM_log(uu, k_plus, k_minus),
+                x0=z0,
+                method=method,
+                options={"maxfev": 10000},
+            )
             u_curr = sol.x
 
         curr = np.linalg.norm(_residuals_SCM_log(u_curr, k_plus, k_minus))
@@ -215,8 +232,13 @@ def solve_SCM_iterative(
             no_improve += 1
 
         if verbose:
-            logger.info("SCM: iter=%d  ||res||=%.3e  best=%.3e  no_improve=%d",
-                        it + 1, curr, best_norm, no_improve)
+            logger.info(
+                "SCM: iter=%d  ||res||=%.3e  best=%.3e  no_improve=%d",
+                it + 1,
+                curr,
+                best_norm,
+                no_improve,
+            )
 
         # Stopping conditions
         if curr < tol:
@@ -225,8 +247,11 @@ def solve_SCM_iterative(
                 logger.info("SCM: converged at iter %d with ||res||=%.3e", it + 1, curr)
             break
         if no_improve >= patience:
-            logger.warning("SCM solver: stopping after %d no-improve iterations at iter %d.",
-                           patience, it + 1)
+            logger.warning(
+                "SCM solver: stopping after %d no-improve iterations at iter %d.",
+                patience,
+                it + 1,
+            )
             break
         if it == max_iter - 1:
             logger.warning("SCM solver: maximum iterations reached before convergence.")
@@ -235,13 +260,14 @@ def solve_SCM_iterative(
         z0 = u_curr.copy()
 
     xp = np.exp(best_u[:N])
-    xm = np.exp(best_u[N:2*N])
+    xm = np.exp(best_u[N : 2 * N])
     return xp, xm, best_norm
 
 
 # ===========================================================================
 # 2) Signed dcSBM: node +/− factors and block +/− affinities
 # ===========================================================================
+
 
 @njit(parallel=True, fastmath=True)
 def _residuals_signed_dcSBM_log(
@@ -252,7 +278,7 @@ def _residuals_signed_dcSBM_log(
     Lp_obs: np.ndarray,
     Ln_obs: np.ndarray,
     block_pairs: np.ndarray,
-    idx_map: np.ndarray
+    idx_map: np.ndarray,
 ) -> np.ndarray:
     """
     Parallel residuals for signed dcSBM in log-parameter space using per-thread
@@ -279,10 +305,10 @@ def _residuals_signed_dcSBM_log(
     N = k_plus.size
     M = block_pairs.shape[0]
 
-    xp = np.exp(u[:N])                # x^+ node factors
-    xm = np.exp(u[N:2*N])             # x^- node factors
-    cp = np.exp(u[2*N:2*N + M])       # χ^+ (flat)
-    cm = np.exp(u[2*N + M:2*N + 2*M]) # χ^- (flat)
+    xp = np.exp(u[:N])  # x^+ node factors
+    xm = np.exp(u[N : 2 * N])  # x^- node factors
+    cp = np.exp(u[2 * N : 2 * N + M])  # χ^+ (flat)
+    cm = np.exp(u[2 * N + M : 2 * N + 2 * M])  # χ^- (flat)
 
     T = get_num_threads()
 
@@ -292,7 +318,7 @@ def _residuals_signed_dcSBM_log(
     blkm_local = np.zeros((T, M))
 
     base = N // T
-    rem  = N % T
+    rem = N % T
 
     for t in prange(T):
         i0 = t * base + (t if t < rem else rem)
@@ -339,15 +365,15 @@ def _residuals_signed_dcSBM_log(
             blkm[m] += blkm_local[t, m]
 
     # Assemble residual vector
-    res = np.empty(2*N + 2*M)
+    res = np.empty(2 * N + 2 * M)
     for i in range(N):
-        res[i]      = degp[i] - k_plus[i]
-        res[N + i]  = degm[i] - k_minus[i]
+        res[i] = degp[i] - k_plus[i]
+        res[N + i] = degm[i] - k_minus[i]
     for m in range(M):
         r = block_pairs[m, 0]
         s = block_pairs[m, 1]
-        res[2*N + m]       = blkp[m] - Lp_obs[r, s]
-        res[2*N + M + m]   = blkm[m] - Ln_obs[r, s]
+        res[2 * N + m] = blkp[m] - Lp_obs[r, s]
+        res[2 * N + M + m] = blkm[m] - Ln_obs[r, s]
     return res
 
 
@@ -400,14 +426,20 @@ def solve_signed_dcSBM_iterative(
         Residual 2-norm at the best solution found.
     """
     if verbose:
-        logger.info("signed dcSBM: starting solve (method=%s, tol=%.1e, max_iter=%d, patience=%d)",
-                    method, tol, max_iter, patience)
+        logger.info(
+            "signed dcSBM: starting solve (method=%s, tol=%.1e, max_iter=%d, patience=%d)",
+            method,
+            tol,
+            max_iter,
+            patience,
+        )
 
     block_pairs, idx_map = _make_block_struct(c)
 
     def f_res(z: np.ndarray) -> np.ndarray:
-        return _residuals_signed_dcSBM_log(z, k_plus, k_minus, c,
-                                           Lp_obs, Ln_obs, block_pairs, idx_map)
+        return _residuals_signed_dcSBM_log(
+            z, k_plus, k_minus, c, Lp_obs, Ln_obs, block_pairs, idx_map
+        )
 
     # Guarded logs for positivity
     z0 = np.log(np.maximum(u_init, EPS))
@@ -421,8 +453,9 @@ def solve_signed_dcSBM_iterative(
         if method == "newton":
             z_curr = newton_krylov(f_res, z0, method="lgmres", inner_maxiter=100)
         else:
-            sol = root(f_res, x0=z0, method=method, tol=tol,
-                       options={"maxfev": 100 * z0.size})
+            sol = root(
+                f_res, x0=z0, method=method, tol=tol, options={"maxfev": 100 * z0.size}
+            )
             z_curr = sol.x
 
         curr = np.linalg.norm(f_res(z_curr))
@@ -436,21 +469,33 @@ def solve_signed_dcSBM_iterative(
             no_improve += 1
 
         if verbose:
-            logger.info("signed dcSBM: iter=%d  ||res||=%.3e  best=%.3e  no_improve=%d",
-                        it + 1, curr, best_norm, no_improve)
+            logger.info(
+                "signed dcSBM: iter=%d  ||res||=%.3e  best=%.3e  no_improve=%d",
+                it + 1,
+                curr,
+                best_norm,
+                no_improve,
+            )
 
         # Stopping conditions
         if curr < tol:
             best_z = z_curr.copy()
             if verbose:
-                logger.info("signed dcSBM: converged at iter %d with ||res||=%.3e", it + 1, curr)
+                logger.info(
+                    "signed dcSBM: converged at iter %d with ||res||=%.3e", it + 1, curr
+                )
             break
         if no_improve >= patience:
-            logger.warning("signed dcSBM solver: stopped after %d no-improve iterations at iter %d.",
-                           patience, it + 1)
+            logger.warning(
+                "signed dcSBM solver: stopped after %d no-improve iterations at iter %d.",
+                patience,
+                it + 1,
+            )
             break
         if it == max_iter - 1:
-            logger.warning("signed dcSBM solver: maximum iterations reached before convergence.")
+            logger.warning(
+                "signed dcSBM solver: maximum iterations reached before convergence."
+            )
 
         # Warm start next step
         z0 = z_curr.copy()

@@ -36,8 +36,8 @@ from networkx.algorithms.community import community_utils
 logger = logging.getLogger("domino.partitions")
 
 # Generic type variables
-T = TypeVar("T")          # node data type (hashable)
-T_co  = TypeVar("T_co", covariant=True)
+T = TypeVar("T")  # node data type (hashable)
+T_co = TypeVar("T_co", covariant=True)
 
 # NodeData: either a single node identifier or a (possibly nested) collection of them
 NodeData = Union[T, Collection["NodeData[T]"]]
@@ -53,9 +53,10 @@ class GraphKeys:
     Using interned/private-like names avoids clashes with user attributes
     and allows internal code to be explicit about where such data lives.
     """
-    WEIGHT           = "__da_ll_w__"
-    NODES            = "__da_ll_n__"
-    PARENT_GRAPH     = "__da_ll_ppg__"
+
+    WEIGHT = "__da_ll_w__"
+    NODES = "__da_ll_n__"
+    PARENT_GRAPH = "__da_ll_ppg__"
     PARENT_PARTITION = "__da_ll_pp__"
 
 
@@ -80,7 +81,7 @@ class Partition(Generic[T_co]):
         blocks: list[set[T_co]],
         node2block: Dict[T_co, int],
         block_degree_sums: list[int],
-        weight_key: Optional[str] = GraphKeys.WEIGHT
+        weight_key: Optional[str] = GraphKeys.WEIGHT,
     ) -> None:
         # Graph reference and total edge weight (cached for possible clients)
         self.G: nx.Graph = G
@@ -101,7 +102,7 @@ class Partition(Generic[T_co]):
         cls,
         G: nx.Graph,
         P: Collection[Collection[T_co]] | Partition[T_co],
-        weight: Optional[str] = None
+        weight: Optional[str] = None,
     ) -> Partition[T_co]:
         """
         Build a Partition from a collection of communities or another Partition.
@@ -128,14 +129,14 @@ class Partition(Generic[T_co]):
 
         blocks = [set(c) for c in P]  # type: ignore
         node2block = {v: idx for idx, com in enumerate(blocks) for v in com}
-        block_degree_sums = [sum(deg for _, deg in G.degree(com, weight=weight)) for com in blocks]
+        block_degree_sums = [
+            sum(deg for _, deg in G.degree(com, weight=weight)) for com in blocks
+        ]
         return cls(G, blocks, node2block, block_degree_sums, weight)
 
     @classmethod
     def singleton_partition(
-        cls,
-        G: nx.Graph,
-        weight: Optional[str] = None
+        cls, G: nx.Graph, weight: Optional[str] = None
     ) -> Partition[T_co]:
         """
         Create a partition where each node is its own community.
@@ -162,8 +163,7 @@ class Partition(Generic[T_co]):
 
     @staticmethod
     def is_partition(
-        G: nx.Graph,
-        P: Collection[Collection[T_co]] | Partition[T_co]
+        G: nx.Graph, P: Collection[Collection[T_co]] | Partition[T_co]
     ) -> bool:
         """
         Check if P is a valid partition of G's nodes.
@@ -212,11 +212,7 @@ class Partition(Generic[T_co]):
         return len(self._blocks)
 
     # ---- Operations ----
-    def move_node(
-        self,
-        node: T_co,
-        target_block: Set[T_co]
-    ) -> Partition[T_co]:
+    def move_node(self, node: T_co, target_block: Set[T_co]) -> Partition[T_co]:
         """
         Move `node` into `target_block` (or create a new block if target empty).
 
@@ -257,8 +253,10 @@ class Partition(Generic[T_co]):
             self._blocks.pop(source_idx)
             self._block_degree_sums.pop(source_idx)
             # rebuild lookup since indices shifted
-            self._node2block = {n: (idx if idx < source_idx else idx - 1)
-                                for n, idx in self._node2block.items()}
+            self._node2block = {
+                n: (idx if idx < source_idx else idx - 1)
+                for n, idx in self._node2block.items()
+            }
         return self
 
     @staticmethod
@@ -310,7 +308,9 @@ class Partition(Generic[T_co]):
           weights are summed. The node indices in the aggregate are the block
           indices in `_blocks` (stable under our updates).
         """
-        H = nx.Graph(**{GraphKeys.PARENT_GRAPH: self.G, GraphKeys.PARENT_PARTITION: self})
+        H = nx.Graph(
+            **{GraphKeys.PARENT_GRAPH: self.G, GraphKeys.PARENT_PARTITION: self}
+        )
         # add supernodes
         for idx, C in enumerate(self._blocks):
             w = sum(self.G.nodes[v].get(self._weight_key, 1) for v in C)
@@ -338,7 +338,7 @@ class Partition(Generic[T_co]):
         """
         ids = {self._node2block[u] for u in self.G[node]} | {self._node2block[node]}
         return {frozenset(self._blocks[i]) for i in ids}
-    
+
     def adjacent_block_ids(self, node: T_co) -> list[int]:
         """
         Fast variant: return block IDs for node's community and neighbors' communities.
@@ -362,6 +362,7 @@ class Partition(Generic[T_co]):
 
 # ---------- Helpers ----------
 
+
 def freeze_sets(set_list: Iterable[Set[T_co]]) -> set[frozenset[T_co]]:
     """
     Convert list of sets into a set of frozensets (hashable communities).
@@ -373,8 +374,7 @@ def freeze_sets(set_list: Iterable[Set[T_co]]) -> set[frozenset[T_co]]:
 
 
 def argmax(
-    objective_function: Callable[[T_co], float],
-    parameters: list[T_co]
+    objective_function: Callable[[T_co], float], parameters: list[T_co]
 ) -> tuple[T_co, float, int]:
     """
     Return (best_param, best_value, index) maximizing objective_function over parameters.
@@ -397,10 +397,7 @@ def argmax(
 
 
 def cut_size_singleton(
-    G: nx.Graph,
-    v: T,
-    D: Set[T],
-    weight: Optional[str] = None
+    G: nx.Graph, v: T, D: Set[T], weight: Optional[str] = None
 ) -> float:
     """
     Fast cut-size of ({v}, D): sum of weights of edges from v into D.
@@ -415,10 +412,7 @@ def cut_size_singleton(
     return total
 
 
-def node_weight_total(
-    G: nx.Graph,
-    N: NodeData[T]
-) -> int:
+def node_weight_total(G: nx.Graph, N: NodeData[T]) -> int:
     """
     Total node weight for a single node or a collection of nodes.
 
@@ -435,10 +429,7 @@ def node_weight_total(
     return sum(node_weight_total(G, n) for n in N)
 
 
-def ensure_edge_weights(
-    G: nx.Graph,
-    weight: Optional[str]
-) -> nx.Graph:
+def ensure_edge_weights(G: nx.Graph, weight: Optional[str]) -> nx.Graph:
     """
     Ensure every edge in G has an attribute GraphKeys.WEIGHT.
 
@@ -470,7 +461,12 @@ def ensure_edge_weights(
         if weight is None and d != 1:
             # This branch is rare; if the caller passed weight=None but
             # NetworkX yields something other than 1, we still mirror it.
-            logger.debug("ensure_edge_weights: copying edge (%r,%r) value=%r into %s",
-                         u, v, d, GraphKeys.WEIGHT)
+            logger.debug(
+                "ensure_edge_weights: copying edge (%r,%r) value=%r into %s",
+                u,
+                v,
+                d,
+                GraphKeys.WEIGHT,
+            )
         G.edges[u, v][GraphKeys.WEIGHT] = d
     return G

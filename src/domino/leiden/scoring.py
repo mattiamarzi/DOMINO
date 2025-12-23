@@ -109,6 +109,10 @@ class CommunityQuality(ABC, Generic[T]):
         # Emit debug diagnostics if the logger is set to DEBUG by the caller.
         logger.debug(
             "delta: node=%r, target_size=%d, before=%.6f, after=%.6f, Δ=%.6f",
-            node, len(target_block), before, after, delta_val
+            node,
+            len(target_block),
+            before,
+            after,
+            delta_val,
         )
         return delta_val

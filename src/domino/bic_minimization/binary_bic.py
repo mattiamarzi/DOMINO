@@ -68,6 +68,7 @@ set_num_threads(N_THREADS)
 # Helper: Partition → dict
 # =============================================================================
 
+
 def _part2dict(part: Partition) -> Dict[int, int]:
     """
     Convert a Partition into a mapping from node index to community index.
@@ -81,9 +82,11 @@ def _part2dict(part: Partition) -> Dict[int, int]:
             mapping[int(v)] = cid
     return mapping
 
+
 # =============================================================================
 # Target-K enforcement: BIC-guided merging (SBM) and optional splitting
 # =============================================================================
+
 
 @njit(cache=True, fastmath=True)
 def _ll_pair_sbm(L_rs: np.int64, M_rs: np.int64) -> float:
@@ -149,12 +152,14 @@ def _delta_bic_merge_sbm(L: np.ndarray, n: np.ndarray, r: int, s: int, N: int) -
     """
     B = n.size
     V = N * (N - 1) / 2.0
-    delta_pen = -B * math.log(V)          # k decreases by B after merging
+    delta_pen = -B * math.log(V)  # k decreases by B after merging
     delta_ll = _delta_ll_merge_sbm(L, n, r, s)
     return delta_pen - 2.0 * delta_ll
 
 
-def _init_block_stats_from_partition(A: np.ndarray, part: Partition) -> Tuple[np.ndarray, np.ndarray]:
+def _init_block_stats_from_partition(
+    A: np.ndarray, part: Partition
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Construct the block edge-count matrix L and the size vector n
     given a partition and the adjacency matrix A.
@@ -188,7 +193,9 @@ def _init_block_stats_from_partition(A: np.ndarray, part: Partition) -> Tuple[np
     return L, n
 
 
-def _apply_merge_update_stats(L: np.ndarray, n: np.ndarray, r: int, s: int) -> Tuple[np.ndarray, np.ndarray]:
+def _apply_merge_update_stats(
+    L: np.ndarray, n: np.ndarray, r: int, s: int
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Update the block statistics (L, n) after merging community s into r.
 
@@ -218,7 +225,9 @@ def _apply_merge_update_stats(L: np.ndarray, n: np.ndarray, r: int, s: int) -> T
 
 
 @njit(cache=True, fastmath=True)
-def _best_merge_pair_sbm(L: np.ndarray, n: np.ndarray, N: int) -> Tuple[int, int, float]:
+def _best_merge_pair_sbm(
+    L: np.ndarray, n: np.ndarray, N: int
+) -> Tuple[int, int, float]:
     """
     Evaluate ΔBIC for all block pairs (i<j) and return the best (most negative)
     merge candidate.
@@ -315,7 +324,9 @@ def _split_largest_community_with_leiden(
 
     # Fallback: random bipartition if there is no effective split
     if len(new_blocks) <= 1:
-        rng = np.random.default_rng(random_state if isinstance(random_state, int) else None)
+        rng = np.random.default_rng(
+            random_state if isinstance(random_state, int) else None
+        )
         nodes_block_arr = np.array(nodes_block)
         rng.shuffle(nodes_block_arr)
         mid = len(nodes_block_arr) // 2
@@ -363,7 +374,8 @@ def _enforce_target_K_exact(
         if verbose:
             logger.warning(
                 "_enforce_target_K_exact: invalid K_target=%d for N=%d; leaving partition unchanged.",
-                K_target, N
+                K_target,
+                N,
             )
         return part
 
@@ -379,7 +391,9 @@ def _enforce_target_K_exact(
         # B < K_target: attempt to split the largest community
         prev_B = B
         part = _split_largest_community_with_leiden(
-            part, G, A,
+            part,
+            G,
+            A,
             theta=theta,
             gamma=gamma,
             random_state=random_state,
@@ -391,25 +405,27 @@ def _enforce_target_K_exact(
             if verbose:
                 logger.warning(
                     "_enforce_target_K_exact: could not increase B from %d; stopping.",
-                    B_new
+                    B_new,
                 )
             return part
 
     if verbose:
         logger.warning(
             "_enforce_target_K_exact: reached max_iters=%d without stabilising at K=%d (final B=%d).",
-            max_iters, K_target, len(part)
+            max_iters,
+            K_target,
+            len(part),
         )
     return part
+
 
 # =============================================================================
 # Vanilla SBM: BIC objective and multi-pass Leiden
 # =============================================================================
 
+
 @njit(cache=True, fastmath=True)
-def _sbm_loglik(adj: np.ndarray,
-                comm: np.ndarray,
-                com_sizes: np.ndarray) -> float:
+def _sbm_loglik(adj: np.ndarray, comm: np.ndarray, com_sizes: np.ndarray) -> float:
     """
     Compute the SBM log-likelihood:
 
@@ -556,11 +572,14 @@ def leiden_sbm(
     """
     if verbose:
         configure_logging(verbose=bool(verbose))
-        logger.info("Leiden (SBM): starting a pass (theta=%.3f, gamma=%.3f)", theta, gamma)
+        logger.info(
+            "Leiden (SBM): starting a pass (theta=%.3f, gamma=%.3f)", theta, gamma
+        )
 
     qf = SBM_BIC_Quality(adj)
-    return LeidenEngine.run(G, qf, initial, theta, gamma,
-                            random_state=random_state, verbose=verbose)
+    return LeidenEngine.run(
+        G, qf, initial, theta, gamma, random_state=random_state, verbose=verbose
+    )
 
 
 def iterative_leiden_SBM(
@@ -590,7 +609,9 @@ def iterative_leiden_SBM(
         configure_logging(verbose=bool(verbose))
         logger.info(
             "iterative_leiden_SBM: start (max_outer=%d, do_macro_merge=%s, target_K=%s)",
-            max_outer, do_macro_merge, str(target_K)
+            max_outer,
+            do_macro_merge,
+            str(target_K),
         )
 
     qf = SBM_BIC_Quality(A)
@@ -601,7 +622,8 @@ def iterative_leiden_SBM(
 
     # First Leiden pass
     part = leiden_sbm(
-        G, A,
+        G,
+        A,
         initial=initial_partition,
         theta=theta,
         gamma=gamma,
@@ -613,7 +635,10 @@ def iterative_leiden_SBM(
 
     if target_K is not None:
         part = _enforce_target_K_exact(
-            part, G, A, target_K,
+            part,
+            G,
+            A,
+            target_K,
             theta=theta,
             gamma=gamma,
             random_state=random_state,
@@ -627,7 +652,10 @@ def iterative_leiden_SBM(
         bic0 = _bic_sbm(A, _part2dict(flat))
         print("[SBM] Early stop: partition unchanged after first pass.")
         if verbose:
-            logger.info("[SBM] Early stop: partition unchanged after first pass (BIC=%.2f).", bic0)
+            logger.info(
+                "[SBM] Early stop: partition unchanged after first pass (BIC=%.2f).",
+                bic0,
+            )
         return copy(flat), bic0
 
     best_part = copy(flat)
@@ -641,7 +669,8 @@ def iterative_leiden_SBM(
             logger.info(msg)
 
         nxt = leiden_sbm(
-            G, A,
+            G,
+            A,
             initial=flat,
             theta=theta,
             gamma=gamma,
@@ -654,7 +683,10 @@ def iterative_leiden_SBM(
 
         if target_K is not None:
             nxt = _enforce_target_K_exact(
-                nxt, G, A, target_K,
+                nxt,
+                G,
+                A,
+                target_K,
                 theta=theta,
                 gamma=gamma,
                 random_state=random_state,
@@ -677,6 +709,7 @@ def iterative_leiden_SBM(
 
     return best_part, best_bic
 
+
 # =============================================================================
 # Degree-Corrected SBM: BIC objective and multi-pass Leiden
 # =============================================================================
@@ -686,8 +719,7 @@ TOL_NEW = TOL_CHI
 MAX_IT_NEW = MAX_IT_CHI
 
 
-def _group_by_comm(xs: np.ndarray,
-                   comm: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+def _group_by_comm(xs: np.ndarray, comm: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """
     Group a vector xs by community labels comm.
 
@@ -710,10 +742,9 @@ def _group_by_comm(xs: np.ndarray,
 
 
 @njit(cache=True, fastmath=True)
-def _dc_loglik(adj: np.ndarray,
-               xs: np.ndarray,
-               comm: np.ndarray,
-               chi: np.ndarray) -> float:
+def _dc_loglik(
+    adj: np.ndarray, xs: np.ndarray, comm: np.ndarray, chi: np.ndarray
+) -> float:
     """
     Log-likelihood of the degree-corrected SBM:
 
@@ -740,12 +771,16 @@ def _dc_loglik(adj: np.ndarray,
 
 
 @njit(cache=True, fastmath=True)
-def _chi_newton_slice(xs: np.ndarray,
-                      a0: int, a1: int,
-                      b0: int, b1: int,
-                      L_rs: int,
-                      same_block: bool,
-                      chi_init: float) -> float:
+def _chi_newton_slice(
+    xs: np.ndarray,
+    a0: int,
+    a1: int,
+    b0: int,
+    b1: int,
+    L_rs: int,
+    same_block: bool,
+    chi_init: float,
+) -> float:
     """
     Solve for χ_{r,s} in a single block pair (r,s) by Newton's method,
     matching the expected number of edges to the observed count L_rs.
@@ -756,8 +791,7 @@ def _chi_newton_slice(xs: np.ndarray,
         return 0.0
 
     # Total possible edges in this block pair
-    m_rs = ((a1 - a0) * (a1 - a0 - 1) // 2 if same_block
-            else (a1 - a0) * (b1 - b0))
+    m_rs = (a1 - a0) * (a1 - a0 - 1) // 2 if same_block else (a1 - a0) * (b1 - b0)
     if L_rs == m_rs:
         return CHI_CAP
 
@@ -783,9 +817,9 @@ def _chi_newton_slice(xs: np.ndarray,
 
 
 @njit(cache=True, parallel=True, fastmath=True)
-def _solve_all_chi(xs_sorted: np.ndarray,
-                   starts: np.ndarray,
-                   L: np.ndarray) -> np.ndarray:
+def _solve_all_chi(
+    xs_sorted: np.ndarray, starts: np.ndarray, L: np.ndarray
+) -> np.ndarray:
     """
     Solve χ_{r,s} for all block pairs in parallel, given fixed xs and
     observed edge counts L[r,s].
@@ -796,14 +830,14 @@ def _solve_all_chi(xs_sorted: np.ndarray,
         a0, a1 = starts[r], starts[r + 1]
         for s in range(r, B):
             b0, b1 = starts[s], starts[s + 1]
-            val = _chi_newton_slice(xs_sorted, a0, a1,
-                                    b0, b1, L[r, s],
-                                    r == s, 1.0)
+            val = _chi_newton_slice(xs_sorted, a0, a1, b0, b1, L[r, s], r == s, 1.0)
             chi[r, s] = chi[s, r] = val
     return chi
 
 
-def _chi_from_partition_and_x(A: np.ndarray, c: np.ndarray, xs_fixed: np.ndarray) -> np.ndarray:
+def _chi_from_partition_and_x(
+    A: np.ndarray, c: np.ndarray, xs_fixed: np.ndarray
+) -> np.ndarray:
     """
     Given a fixed vector x and community labels c, solve χ_{r,s} for all
     block pairs using the observed edge counts in adjacency A.
@@ -814,10 +848,12 @@ def _chi_from_partition_and_x(A: np.ndarray, c: np.ndarray, xs_fixed: np.ndarray
     return chi
 
 
-def _bic_dcSBM(adj: np.ndarray,
-               xs: np.ndarray,
-               comm_dict: Dict[int, int],
-               chi: Optional[np.ndarray] = None) -> float:
+def _bic_dcSBM(
+    adj: np.ndarray,
+    xs: np.ndarray,
+    comm_dict: Dict[int, int],
+    chi: Optional[np.ndarray] = None,
+) -> float:
     """
     Compute the BIC for the degree-corrected SBM:
 
@@ -907,10 +943,19 @@ def leiden_dcSBM(
     """
     if verbose:
         configure_logging(verbose=bool(verbose))
-        logger.info("Leiden (dcSBM): starting a pass (theta=%.3f, gamma=%.3f)", theta, gamma)
+        logger.info(
+            "Leiden (dcSBM): starting a pass (theta=%.3f, gamma=%.3f)", theta, gamma
+        )
 
-    return LeidenEngine.run(G, DC_BIC_Quality(adj, xs), initial, theta, gamma,
-                            random_state=random_state, verbose=verbose)
+    return LeidenEngine.run(
+        G,
+        DC_BIC_Quality(adj, xs),
+        initial,
+        theta,
+        gamma,
+        random_state=random_state,
+        verbose=verbose,
+    )
 
 
 def _build_L_obs(A: np.ndarray, c: np.ndarray) -> np.ndarray:
@@ -931,7 +976,7 @@ def _build_L_obs(A: np.ndarray, c: np.ndarray) -> np.ndarray:
     ci = c[iu]
     cj = c[ju]
 
-    same = (ci == cj)
+    same = ci == cj
     diff = ~same
 
     if np.any(same):
@@ -978,7 +1023,10 @@ def iterative_leiden_dcSBM(
         configure_logging(verbose=bool(verbose))
         logger.info(
             "iterative_leiden_dcSBM: start (max_outer=%d, do_macro_merge=%s, target_K=%s, fix_x_ubcm=%s)",
-            max_outer, do_macro_merge, str(target_K), fix_x_ubcm
+            max_outer,
+            do_macro_merge,
+            str(target_K),
+            fix_x_ubcm,
         )
 
     k = A.sum(axis=1)
@@ -1000,16 +1048,28 @@ def iterative_leiden_dcSBM(
                 xs, _ = solve_UBCM_iterative(k, x0)
             else:
                 L_obs0 = _build_L_obs(A, c0)
-                block_list0 = [(r, s) for r in range(c0.max() + 1) for s in range(r, c0.max() + 1)]
-                x0 = k / np.sqrt(2 * L_obs0.sum()) if L_obs0.sum() > 0 else np.maximum(k, EPS)
+                block_list0 = [
+                    (r, s) for r in range(c0.max() + 1) for s in range(r, c0.max() + 1)
+                ]
+                x0 = (
+                    k / np.sqrt(2 * L_obs0.sum())
+                    if L_obs0.sum() > 0
+                    else np.maximum(k, EPS)
+                )
                 chi0 = np.ones(len(block_list0))
                 u_init0 = np.concatenate([x0, chi0])
                 u_opt0, _ = solve_dcSBM_iterative(
-                    k=k, c=c0, L_obs=L_obs0, u_init=u_init0, method="lm",
-                    tol=TOL_DCSBM, max_iter=MAX_IT_DEFAULT,
-                    patience=PATIENCE_DEFAULT, verbose=False
+                    k=k,
+                    c=c0,
+                    L_obs=L_obs0,
+                    u_init=u_init0,
+                    method="lm",
+                    tol=TOL_DCSBM,
+                    max_iter=MAX_IT_DEFAULT,
+                    patience=PATIENCE_DEFAULT,
+                    verbose=False,
                 )
-                xs = u_opt0[:A.shape[0]]
+                xs = u_opt0[: A.shape[0]]
         else:
             x0 = k / math.sqrt(2.0 * m_total) if m_total > 0 else np.maximum(k, EPS)
             xs, _ = solve_UBCM_iterative(k, x0)
@@ -1017,7 +1077,9 @@ def iterative_leiden_dcSBM(
     # 1) First Leiden pass under dcSBM BIC
     qf = DC_BIC_Quality(A, xs)
     part = leiden_dcSBM(
-        G, A, xs,
+        G,
+        A,
+        xs,
         initial=initial_partition,
         theta=theta,
         gamma=gamma,
@@ -1030,7 +1092,10 @@ def iterative_leiden_dcSBM(
 
     if target_K is not None:
         part = _enforce_target_K_exact(
-            part, G, A, target_K,
+            part,
+            G,
+            A,
+            target_K,
             theta=theta,
             gamma=gamma,
             random_state=random_state,
@@ -1046,7 +1111,10 @@ def iterative_leiden_dcSBM(
             bic0 = _bic_dcSBM(A, xs, _part2dict(flat))
             print("[dcSBM] Early stop: partition unchanged after first pass.")
             if verbose:
-                logger.info("[dcSBM] Early stop: partition unchanged after first pass (BIC=%.2f).", bic0)
+                logger.info(
+                    "[dcSBM] Early stop: partition unchanged after first pass (BIC=%.2f).",
+                    bic0,
+                )
             return copy(flat), bic0
 
     best_part: Optional[Partition] = None
@@ -1065,18 +1133,30 @@ def iterative_leiden_dcSBM(
             chi_ref = _chi_from_partition_and_x(A, c, xs_ref)
         else:
             L_obs = _build_L_obs(A, c)
-            block_list = [(r, s) for r in range(c.max() + 1) for s in range(r, c.max() + 1)]
-            x0 = k / math.sqrt(2 * L_obs.sum()) if L_obs.sum() > 0 else np.maximum(k, EPS)
+            block_list = [
+                (r, s) for r in range(c.max() + 1) for s in range(r, c.max() + 1)
+            ]
+            x0 = (
+                k / math.sqrt(2 * L_obs.sum())
+                if L_obs.sum() > 0
+                else np.maximum(k, EPS)
+            )
             chi0 = np.ones(len(block_list))
             u_init = np.concatenate([x0, chi0])
 
             u_opt, _ = solve_dcSBM_iterative(
-                k=k, c=c, L_obs=L_obs, u_init=u_init, method="lm",
-                tol=TOL_DCSBM, max_iter=MAX_IT_DEFAULT,
-                patience=PATIENCE_DEFAULT, verbose=False
+                k=k,
+                c=c,
+                L_obs=L_obs,
+                u_init=u_init,
+                method="lm",
+                tol=TOL_DCSBM,
+                max_iter=MAX_IT_DEFAULT,
+                patience=PATIENCE_DEFAULT,
+                verbose=False,
             )
-            xs_ref = u_opt[:A.shape[0]]
-            chi_flat = u_opt[A.shape[0]:]
+            xs_ref = u_opt[: A.shape[0]]
+            chi_flat = u_opt[A.shape[0] :]
             chi_ref = np.zeros((c.max() + 1, c.max() + 1))
             for idx, (r, s) in enumerate(block_list):
                 chi_ref[r, s] = chi_ref[s, r] = chi_flat[idx]
@@ -1093,7 +1173,9 @@ def iterative_leiden_dcSBM(
         # Next Leiden pass with updated parameters
         qf = DC_BIC_Quality(A, xs_ref)
         part_next = leiden_dcSBM(
-            G, A, xs_ref,
+            G,
+            A,
+            xs_ref,
             initial=flat,
             theta=theta,
             gamma=gamma,
@@ -1105,7 +1187,10 @@ def iterative_leiden_dcSBM(
 
         if target_K is not None:
             part_next = _enforce_target_K_exact(
-                part_next, G, A, target_K,
+                part_next,
+                G,
+                A,
+                target_K,
                 theta=theta,
                 gamma=gamma,
                 random_state=random_state,
@@ -1141,13 +1226,19 @@ def iterative_leiden_dcSBM(
 
         tol_solver = TOL_DCSBM
         u_opt, best_norm = solve_dcSBM_iterative(
-            k=k, c=c, L_obs=L_obs, u_init=u0, method="lm",
-            tol=tol_solver, max_iter=MAX_IT_DEFAULT,
-            patience=PATIENCE_DEFAULT, verbose=False
+            k=k,
+            c=c,
+            L_obs=L_obs,
+            u_init=u0,
+            method="lm",
+            tol=tol_solver,
+            max_iter=MAX_IT_DEFAULT,
+            patience=PATIENCE_DEFAULT,
+            verbose=False,
         )
 
         if best_norm < tol_solver:
-            x_hat = u_opt[:A.shape[0]]
+            x_hat = u_opt[: A.shape[0]]
             chi_hat = np.zeros((c.max() + 1, c.max() + 1))
             for idx, (r, s) in enumerate(block_list):
                 chi_hat[r, s] = chi_hat[s, r] = u_opt[A.shape[0] + idx]
@@ -1155,14 +1246,18 @@ def iterative_leiden_dcSBM(
             true_bic = _bic_dcSBM(A, x_hat, _part2dict(flat_final), chi_hat)
             print(f"[dcSBM] Post-hoc full-parameter BIC (exact): {true_bic:.2f}")
             if verbose:
-                logger.info("[dcSBM] Post-hoc full-parameter BIC (exact): %.2f", true_bic)
+                logger.info(
+                    "[dcSBM] Post-hoc full-parameter BIC (exact): %.2f", true_bic
+                )
             best_bic = true_bic
         else:
-            print(f"[dcSBM] Post-hoc solver did not converge; keeping fixed-x BIC={best_bic:.2f}.")
+            print(
+                f"[dcSBM] Post-hoc solver did not converge; keeping fixed-x BIC={best_bic:.2f}."
+            )
             if verbose:
                 logger.warning(
                     "[dcSBM] Post-hoc solver did not converge; keeping fixed-x BIC=%.2f.",
-                    best_bic
+                    best_bic,
                 )
 
     if best_part is None:

@@ -67,6 +67,7 @@ logger = logging.getLogger("domino.bic.signed")
 N_THREADS = max(1, int(os.getenv("THREADS", os.cpu_count() or 1)))
 set_num_threads(N_THREADS)
 
+
 # -----------------------------------------------------------------------------
 # Utility: flatten a Partition into a {node → community} dict
 # -----------------------------------------------------------------------------
@@ -83,9 +84,11 @@ def _part2dict(part: Partition) -> Dict[int, int]:
             mapping[v] = cid
     return mapping
 
+
 # =============================================================================
 # Target-K enforcement for *signed* SBM (tri-nomial log-likelihood)
 # =============================================================================
+
 
 @njit(cache=True, fastmath=True)
 def _ll_pair_signed(Lp_rs: np.int64, Ln_rs: np.int64, M_rs: np.int64) -> float:
@@ -120,9 +123,11 @@ def _ll_pair_signed(Lp_rs: np.int64, Ln_rs: np.int64, M_rs: np.int64) -> float:
         out += L0 * math.log(r)
     return out
 
+
 @njit(cache=True, fastmath=True)
-def _delta_ll_merge_signed(Lp: np.ndarray, Ln: np.ndarray,
-                           n: np.ndarray, r: int, s: int) -> float:
+def _delta_ll_merge_signed(
+    Lp: np.ndarray, Ln: np.ndarray, n: np.ndarray, r: int, s: int
+) -> float:
     """
     Change in signed SBM log-likelihood if we merge communities r and s (into r).
     Only pairs touching r or s are affected.
@@ -158,9 +163,11 @@ def _delta_ll_merge_signed(Lp: np.ndarray, Ln: np.ndarray,
 
     return ll_new - ll_old
 
+
 @njit(cache=True, fastmath=True)
-def _delta_bic_merge_signed(Lp: np.ndarray, Ln: np.ndarray, n: np.ndarray,
-                            r: int, s: int, N: int) -> float:
+def _delta_bic_merge_signed(
+    Lp: np.ndarray, Ln: np.ndarray, n: np.ndarray, r: int, s: int, N: int
+) -> float:
     """
     ΔBIC for merging (r,s) in signed SBM:
         k = B(B+1)   (two parameters per unordered block-pair)
@@ -170,11 +177,13 @@ def _delta_bic_merge_signed(Lp: np.ndarray, Ln: np.ndarray, n: np.ndarray,
     B = n.size
     V = N * (N - 1) / 2.0
     delta_pen = -2.0 * B * math.log(V)
-    delta_ll  = _delta_ll_merge_signed(Lp, Ln, n, r, s)
+    delta_ll = _delta_ll_merge_signed(Lp, Ln, n, r, s)
     return delta_pen - 2.0 * delta_ll
 
-def _init_block_stats_from_partition_signed(Ap: np.ndarray, An: np.ndarray,
-                                            part: Partition) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+
+def _init_block_stats_from_partition_signed(
+    Ap: np.ndarray, An: np.ndarray, part: Partition
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Build Lp (pos), Ln (neg) and size vector n for the current partition.
     Costs O(B^2) submatrix sums once; subsequent merges are O(B) updates.
@@ -182,7 +191,7 @@ def _init_block_stats_from_partition_signed(Ap: np.ndarray, An: np.ndarray,
     B = len(part)
     Lp = np.zeros((B, B), dtype=np.int64)
     Ln = np.zeros((B, B), dtype=np.int64)
-    n  = np.zeros(B, dtype=np.int64)
+    n = np.zeros(B, dtype=np.int64)
 
     idxs: list[np.ndarray] = []
     for cid, C in enumerate(part):
@@ -197,7 +206,7 @@ def _init_block_stats_from_partition_signed(Ap: np.ndarray, An: np.ndarray,
             subn = An[np.ix_(ir, ir)]
             Lp[r, r] = int(np.triu(subp, 1).sum())
             Ln[r, r] = int(np.triu(subn, 1).sum())
-        for s in range(r+1, B):
+        for s in range(r + 1, B):
             is_ = idxs[s]
             if ir.size > 0 and is_.size > 0:
                 vp = int(Ap[np.ix_(ir, is_)].sum())
@@ -206,8 +215,10 @@ def _init_block_stats_from_partition_signed(Ap: np.ndarray, An: np.ndarray,
                 Ln[r, s] = Ln[s, r] = vn
     return Lp, Ln, n
 
-def _apply_merge_update_stats_signed(Lp: np.ndarray, Ln: np.ndarray, n: np.ndarray,
-                                     r: int, s: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+
+def _apply_merge_update_stats_signed(
+    Lp: np.ndarray, Ln: np.ndarray, n: np.ndarray, r: int, s: int
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Update (Lp, Ln, n) after merging s into r (and dropping s).
     """
@@ -221,8 +232,8 @@ def _apply_merge_update_stats_signed(Lp: np.ndarray, Ln: np.ndarray, n: np.ndarr
             continue
         Lp[r, q] += Lp[s, q]
         Ln[r, q] += Ln[s, q]
-        Lp[q, r]  = Lp[r, q]
-        Ln[q, r]  = Ln[r, q]
+        Lp[q, r] = Lp[r, q]
+        Ln[q, r] = Ln[r, q]
 
     Lp[r, r] = Lp_rr_new
     Ln[r, r] = Ln_rr_new
@@ -234,8 +245,11 @@ def _apply_merge_update_stats_signed(Lp: np.ndarray, Ln: np.ndarray, n: np.ndarr
     n = np.delete(n, s)
     return Lp, Ln, n
 
+
 @njit(cache=True, fastmath=True)
-def _best_merge_pair_signed(Lp: np.ndarray, Ln: np.ndarray, n: np.ndarray, N: int) -> tuple[int, int, float]:
+def _best_merge_pair_signed(
+    Lp: np.ndarray, Ln: np.ndarray, n: np.ndarray, N: int
+) -> tuple[int, int, float]:
     """
     Evaluate ΔBIC for all pairs (i<j) and return the best (most negative).
     """
@@ -250,7 +264,10 @@ def _best_merge_pair_signed(Lp: np.ndarray, Ln: np.ndarray, n: np.ndarray, N: in
                 best_i, best_j = i, j
     return best_i, best_j, best_delta
 
-def _enforce_target_K_sSBM(part: Partition, Ap: np.ndarray, An: np.ndarray, K_target: int) -> Partition:
+
+def _enforce_target_K_sSBM(
+    part: Partition, Ap: np.ndarray, An: np.ndarray, K_target: int
+) -> Partition:
     """
     Greedy BIC-optimal merges until len(part) == K_target (signed SBM model).
     Works entirely on block stats; updates partition only for the chosen merge.
@@ -270,6 +287,7 @@ def _enforce_target_K_sSBM(part: Partition, Ap: np.ndarray, An: np.ndarray, K_ta
         Lp, Ln, n = _apply_merge_update_stats_signed(Lp, Ln, n, i, j)
 
     return part
+
 
 # -----------------------------------------------------------------------------
 # Exact target-K enforcement (split + merge), in analogy with binary_bic.py
@@ -372,6 +390,7 @@ def _split_largest_community_with_leiden_sSBM(
     new_part = Partition.from_partition(G, blocks_new)
     return new_part.flatten()
 
+
 def _enforce_target_K_exact_sSBM(
     part: Partition,
     G: nx.Graph,
@@ -434,13 +453,16 @@ def _enforce_target_K_exact_sSBM(
 
     return part
 
+
 # =============================================================================
 # Signed SBM: likelihood & BIC
 # =============================================================================
 
+
 @njit(cache=True, fastmath=True)
-def _signed_sbm_loglik(Ap: np.ndarray, An: np.ndarray,
-                       comm: np.ndarray, sizes: np.ndarray) -> float:
+def _signed_sbm_loglik(
+    Ap: np.ndarray, An: np.ndarray, comm: np.ndarray, sizes: np.ndarray
+) -> float:
     """
     Tri-nomial (+,−,0) SBM log-likelihood at blockwise MLEs.
     """
@@ -453,7 +475,7 @@ def _signed_sbm_loglik(Ap: np.ndarray, An: np.ndarray,
     # count +/− edges per block-pair (i<j once)
     for i in range(N):
         ci = comm[i]
-        for j in range(i+1, N):
+        for j in range(i + 1, N):
             if Ap[i, j]:
                 cj = comm[j]
                 Lp[ci, cj] += 1
@@ -470,10 +492,11 @@ def _signed_sbm_loglik(Ap: np.ndarray, An: np.ndarray,
         nr = sizes[r]
         Mrr = nr * (nr - 1) // 2
         logL += _ll_pair_signed(Lp[r, r], Ln[r, r], Mrr)
-        for s in range(r+1, B):
+        for s in range(r + 1, B):
             Mrs = nr * sizes[s]
             logL += _ll_pair_signed(Lp[r, s], Ln[r, s], Mrs)
     return logL
+
 
 def _bic_signed_sbm(Ap: np.ndarray, An: np.ndarray, comm_dict: Dict[int, int]) -> float:
     """
@@ -489,29 +512,37 @@ def _bic_signed_sbm(Ap: np.ndarray, An: np.ndarray, comm_dict: Dict[int, int]) -
     sizes = np.bincount(comm, minlength=B)
 
     logL = _signed_sbm_loglik(Ap, An, comm, sizes)
-    k    = B * (B + 1)          # two parameters per unordered block-pair
-    V    = N * (N - 1) / 2.0
+    k = B * (B + 1)  # two parameters per unordered block-pair
+    V = N * (N - 1) / 2.0
     return k * math.log(V) - 2.0 * logL
+
 
 class Signed_SBM_BIC_Quality:
     """Leiden quality = −BIC for the signed SBM."""
+
     def __init__(self, Apos: np.ndarray, Aneg: np.ndarray):
         self.Apos, self.Aneg = Apos, Aneg
+
     def __call__(self, part):
         return -_bic_signed_sbm(self.Apos, self.Aneg, _part2dict(part.flatten()))
+
     def delta(self, part, v, target):
         old = self.__call__(part)
         new = copy(part).move_node(v, target)
         return self.__call__(new) - old
 
-def leiden_signed_sbm(G: nx.Graph,
-                      Apos: np.ndarray, Aneg: np.ndarray,
-                      *,
-                      initial=None,
-                      theta: float = 0.3,
-                      gamma: float = 0.0,
-                      random_state: Optional[Union[int, np.random.Generator, random.Random]] = None,
-                      verbose: int | bool = False):
+
+def leiden_signed_sbm(
+    G: nx.Graph,
+    Apos: np.ndarray,
+    Aneg: np.ndarray,
+    *,
+    initial=None,
+    theta: float = 0.3,
+    gamma: float = 0.0,
+    random_state: Optional[Union[int, np.random.Generator, random.Random]] = None,
+    verbose: int | bool = False,
+):
     """
     One Leiden pass maximizing −BIC for signed SBM.
 
@@ -532,11 +563,15 @@ def leiden_signed_sbm(G: nx.Graph,
     """
     if verbose:
         configure_logging(verbose=bool(verbose))
-        logger.info("Leiden (sSBM): starting a pass (theta=%.3f, gamma=%.3f)", theta, gamma)
+        logger.info(
+            "Leiden (sSBM): starting a pass (theta=%.3f, gamma=%.3f)", theta, gamma
+        )
 
     qf = Signed_SBM_BIC_Quality(Apos, Aneg)
-    return LeidenEngine.run(G, qf, initial, theta, gamma,
-                            random_state=random_state, verbose=verbose)
+    return LeidenEngine.run(
+        G, qf, initial, theta, gamma, random_state=random_state, verbose=verbose
+    )
+
 
 def iterative_leiden_sSBM(
     G: nx.Graph,
@@ -563,8 +598,12 @@ def iterative_leiden_sSBM(
     """
     if verbose:
         configure_logging(verbose=bool(verbose))
-        logger.info("iterative_leiden_sSBM: start (max_outer=%d, do_macro_merge=%s, target_K=%s)",
-                    max_outer, do_macro_merge, str(target_K))
+        logger.info(
+            "iterative_leiden_sSBM: start (max_outer=%d, do_macro_merge=%s, target_K=%s)",
+            max_outer,
+            do_macro_merge,
+            str(target_K),
+        )
 
     qf = Signed_SBM_BIC_Quality(Apos, Aneg)
 
@@ -572,9 +611,16 @@ def iterative_leiden_sSBM(
     if initial_partition is not None:
         init_flat = Partition.from_partition(G, initial_partition).flatten()
 
-    part = leiden_signed_sbm(G, Apos, Aneg,
-                             initial=initial_partition, theta=theta, gamma=gamma,
-                             random_state=random_state, verbose=verbose)
+    part = leiden_signed_sbm(
+        G,
+        Apos,
+        Aneg,
+        initial=initial_partition,
+        theta=theta,
+        gamma=gamma,
+        random_state=random_state,
+        verbose=verbose,
+    )
     if do_macro_merge:
         part = macro_merge_partition(part, qf)
     if target_K is not None:
@@ -587,11 +633,14 @@ def iterative_leiden_sSBM(
         bic0 = _bic_signed_sbm(Apos, Aneg, _part2dict(flat))
         print("[sSBM] Early stop: partition unchanged after first pass.")
         if verbose:
-            logger.info("[sSBM] Early stop: partition unchanged after first pass (BIC=%.2f).", bic0)
+            logger.info(
+                "[sSBM] Early stop: partition unchanged after first pass (BIC=%.2f).",
+                bic0,
+            )
         return copy(flat), bic0
 
     best_part = copy(flat)
-    best_bic  = _bic_signed_sbm(Apos, Aneg, _part2dict(flat))
+    best_bic = _bic_signed_sbm(Apos, Aneg, _part2dict(flat))
 
     for it in range(1, max_outer + 1):
         msg = f"[sSBM] iter {it}: BIC={best_bic:.2f}, communities={len(flat)}"
@@ -599,8 +648,16 @@ def iterative_leiden_sSBM(
         if verbose:
             logger.info(msg)
 
-        nxt = leiden_signed_sbm(G, Apos, Aneg, initial=flat, theta=theta, gamma=gamma,
-                                random_state=random_state, verbose=verbose)
+        nxt = leiden_signed_sbm(
+            G,
+            Apos,
+            Aneg,
+            initial=flat,
+            theta=theta,
+            gamma=gamma,
+            random_state=random_state,
+            verbose=verbose,
+        )
         if do_macro_merge:
             nxt = macro_merge_partition(nxt, qf)
         if target_K is not None:
@@ -622,32 +679,40 @@ def iterative_leiden_sSBM(
 
     return best_part, best_bic
 
+
 # =============================================================================
 # Signed dcSBM: likelihood, χ-solvers (fixed-x path), and BIC
 # =============================================================================
 
-def _group_by_comm_both(xs_plus: np.ndarray,
-                        xs_minus: np.ndarray,
-                        comm: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+
+def _group_by_comm_both(
+    xs_plus: np.ndarray, xs_minus: np.ndarray, comm: np.ndarray
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Sort x^+ and x^- by community label (same permutation for both) and
     return xs_plus_sorted, xs_minus_sorted, and 'starts' boundaries.
     """
-    order       = np.argsort(comm, kind="stable")
-    xp_sorted   = xs_plus[order]
-    xm_sorted   = xs_minus[order]
+    order = np.argsort(comm, kind="stable")
+    xp_sorted = xs_plus[order]
+    xm_sorted = xs_minus[order]
     comm_sorted = comm[order]
     _, first, _ = np.unique(comm_sorted, return_index=True, return_counts=True)
-    starts           = np.empty(first.size + 1, dtype=np.int64)
-    starts[:-1]      = first
-    starts[-1]       = xs_plus.size
+    starts = np.empty(first.size + 1, dtype=np.int64)
+    starts[:-1] = first
+    starts[-1] = xs_plus.size
     return xp_sorted, xm_sorted, starts
 
+
 @njit(cache=True, fastmath=True)
-def _loglik_signed_dcSBM(Ap: np.ndarray, An: np.ndarray,
-                         xp: np.ndarray, xm: np.ndarray,
-                         comm: np.ndarray,
-                         chi_p: np.ndarray, chi_m: np.ndarray) -> float:
+def _loglik_signed_dcSBM(
+    Ap: np.ndarray,
+    An: np.ndarray,
+    xp: np.ndarray,
+    xm: np.ndarray,
+    comm: np.ndarray,
+    chi_p: np.ndarray,
+    chi_m: np.ndarray,
+) -> float:
     """
     Log-likelihood for signed dcSBM with tri-nomial probabilities.
     """
@@ -655,7 +720,7 @@ def _loglik_signed_dcSBM(Ap: np.ndarray, An: np.ndarray,
     ll = 0.0
     for i in range(N):
         xpi, xmi, ci = xp[i], xm[i], comm[i]
-        for j in range(i+1, N):
+        for j in range(i + 1, N):
             cj = comm[j]
             zpi = xpi * xp[j] * chi_p[ci, cj]
             zmi = xmi * xm[j] * chi_m[ci, cj]
@@ -674,7 +739,10 @@ def _loglik_signed_dcSBM(Ap: np.ndarray, An: np.ndarray,
                     ll += math.log(q)
     return ll
 
-def _build_L_obs_signed(Ap: np.ndarray, An: np.ndarray, c: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+
+def _build_L_obs_signed(
+    Ap: np.ndarray, An: np.ndarray, c: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Build observed +/− link counts per community pair:
       - use only upper triangle (i<j)
@@ -691,7 +759,7 @@ def _build_L_obs_signed(Ap: np.ndarray, An: np.ndarray, c: np.ndarray) -> tuple[
     nz = w != 0
     ci = c[iu[nz]]
     cj = c[ju[nz]]
-    same = (ci == cj)
+    same = ci == cj
     if np.any(same):
         np.add.at(Lp, (ci[same], cj[same]), w[nz][same])
     diff = ~same
@@ -704,7 +772,7 @@ def _build_L_obs_signed(Ap: np.ndarray, An: np.ndarray, c: np.ndarray) -> tuple[
     nz = w != 0
     ci = c[iu[nz]]
     cj = c[ju[nz]]
-    same = (ci == cj)
+    same = ci == cj
     if np.any(same):
         np.add.at(Ln, (ci[same], cj[same]), w[nz][same])
     diff = ~same
@@ -714,12 +782,21 @@ def _build_L_obs_signed(Ap: np.ndarray, An: np.ndarray, c: np.ndarray) -> tuple[
 
     return Lp, Ln
 
+
 @njit(cache=True, fastmath=True)
-def _chi2_newton_slice(xp_sorted: np.ndarray, xm_sorted: np.ndarray,
-                       a0: int, a1: int, b0: int, b1: int,
-                       Lp_rs: int, Ln_rs: int,
-                       same_block: bool,
-                       chi_p_init: float, chi_m_init: float) -> tuple[float, float]:
+def _chi2_newton_slice(
+    xp_sorted: np.ndarray,
+    xm_sorted: np.ndarray,
+    a0: int,
+    a1: int,
+    b0: int,
+    b1: int,
+    Lp_rs: int,
+    Ln_rs: int,
+    same_block: bool,
+    chi_p_init: float,
+    chi_m_init: float,
+) -> tuple[float, float]:
     """
     Solve (f^+=0, f^−=0) for a single block-pair (r,s) using 2D Newton:
       f^+(χ^+,χ^−) = ∑ p^+_{ij} − Lp_rs
@@ -730,7 +807,7 @@ def _chi2_newton_slice(xp_sorted: np.ndarray, xm_sorted: np.ndarray,
     where t^+_{ij} = x^+_i x^+_j, t^-_{ij} = x^-_i x^-_j.
     """
     # total possible dyads in the slice
-    m_rs = ((a1 - a0) * (a1 - a0 - 1) // 2 if same_block else (a1 - a0) * (b1 - b0))
+    m_rs = (a1 - a0) * (a1 - a0 - 1) // 2 if same_block else (a1 - a0) * (b1 - b0)
     # trivial cases
     if Lp_rs == 0 and Ln_rs == 0:
         return 0.0, 0.0
@@ -753,11 +830,11 @@ def _chi2_newton_slice(xp_sorted: np.ndarray, xm_sorted: np.ndarray,
         for i in range(a0, a1):
             xpi = xp_sorted[i]
             xmi = xm_sorted[i]
-            j_start = i+1 if (same_block and b0 == a0) else b0
+            j_start = i + 1 if (same_block and b0 == a0) else b0
             for j in range(j_start, b1):
                 tp = xpi * xp_sorted[j]
                 tm = xmi * xm_sorted[j]
-                D  = 1.0 + cp * tp + cm * tm
+                D = 1.0 + cp * tp + cm * tm
 
                 pp = (cp * tp) / D
                 pm = (cm * tm) / D
@@ -767,8 +844,8 @@ def _chi2_newton_slice(xp_sorted: np.ndarray, xm_sorted: np.ndarray,
 
                 invD2 = 1.0 / (D * D)
                 j11 += tp * (D - cp * tp) * invD2
-                j12 += - (cp * tp * tm) * invD2
-                j21 += - (cm * tm * tp) * invD2
+                j12 += -(cp * tp * tm) * invD2
+                j21 += -(cm * tm * tp) * invD2
                 j22 += tm * (D - cm * tm) * invD2
 
         f1 -= Lp_rs
@@ -779,7 +856,7 @@ def _chi2_newton_slice(xp_sorted: np.ndarray, xm_sorted: np.ndarray,
         if abs(det) < EPS:
             break
         dcp = (-j22 * f1 + j12 * f2) / det
-        dcm = ( j21 * f1 - j11 * f2) / det
+        dcm = (j21 * f1 - j11 * f2) / det
 
         # update with basic damping to keep positivity
         cp = max(cp + dcp, EPS)
@@ -791,10 +868,15 @@ def _chi2_newton_slice(xp_sorted: np.ndarray, xm_sorted: np.ndarray,
     # clamp to avoid runaway values when blocks are near-saturated
     return min(cp, CHI_CAP), min(cm, CHI_CAP)
 
+
 @njit(cache=True, parallel=True, fastmath=True)
-def _solve_all_chi_signed(xp_sorted: np.ndarray, xm_sorted: np.ndarray,
-                          starts: np.ndarray,
-                          Lp: np.ndarray, Ln: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def _solve_all_chi_signed(
+    xp_sorted: np.ndarray,
+    xm_sorted: np.ndarray,
+    starts: np.ndarray,
+    Lp: np.ndarray,
+    Ln: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Solve (χ^+, χ^−) for every block-pair in parallel.
     """
@@ -802,20 +884,30 @@ def _solve_all_chi_signed(xp_sorted: np.ndarray, xm_sorted: np.ndarray,
     chi_p = np.zeros((B, B))
     chi_m = np.zeros((B, B))
     for r in prange(B):
-        a0, a1 = starts[r], starts[r+1]
+        a0, a1 = starts[r], starts[r + 1]
         for s in range(r, B):
-            b0, b1 = starts[s], starts[s+1]
-            cp, cm = _chi2_newton_slice(xp_sorted, xm_sorted,
-                                        a0, a1, b0, b1,
-                                        Lp[r, s], Ln[r, s],
-                                        r == s, 1.0, 1.0)
+            b0, b1 = starts[s], starts[s + 1]
+            cp, cm = _chi2_newton_slice(
+                xp_sorted,
+                xm_sorted,
+                a0,
+                a1,
+                b0,
+                b1,
+                Lp[r, s],
+                Ln[r, s],
+                r == s,
+                1.0,
+                1.0,
+            )
             chi_p[r, s] = chi_p[s, r] = cp
             chi_m[r, s] = chi_m[s, r] = cm
     return chi_p, chi_m
 
-def _chi_from_partition_and_x_signed(Ap: np.ndarray, An: np.ndarray,
-                                     c: np.ndarray,
-                                     xp: np.ndarray, xm: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+
+def _chi_from_partition_and_x_signed(
+    Ap: np.ndarray, An: np.ndarray, c: np.ndarray, xp: np.ndarray, xm: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Given fixed (x^+, x^−) and labels c, solve (χ^+, χ^−) for all block pairs.
     """
@@ -824,58 +916,84 @@ def _chi_from_partition_and_x_signed(Ap: np.ndarray, An: np.ndarray,
     chi_p, chi_m = _solve_all_chi_signed(xp_s, xm_s, starts, Lp_obs, Ln_obs)
     return chi_p, chi_m
 
-def _bic_signed_dcSBM(Ap: np.ndarray, An: np.ndarray,
-                      xp: np.ndarray, xm: np.ndarray,
-                      comm_dict: Dict[int, int],
-                      chi_p: Optional[np.ndarray] = None,
-                      chi_m: Optional[np.ndarray] = None) -> float:
+
+def _bic_signed_dcSBM(
+    Ap: np.ndarray,
+    An: np.ndarray,
+    xp: np.ndarray,
+    xm: np.ndarray,
+    comm_dict: Dict[int, int],
+    chi_p: Optional[np.ndarray] = None,
+    chi_m: Optional[np.ndarray] = None,
+) -> float:
     """
     BIC for signed dcSBM:
       κ = 2N + B(B+1),   V = N(N−1)/2
       BIC = κ*log(V) − 2*logL
     """
     N = Ap.shape[0]
-    c  = np.fromiter((comm_dict[i] for i in range(N)), dtype=np.int64)
-    B  = c.max() + 1
+    c = np.fromiter((comm_dict[i] for i in range(N)), dtype=np.int64)
+    B = c.max() + 1
 
     if chi_p is None or chi_m is None:
         chi_p, chi_m = _chi_from_partition_and_x_signed(Ap, An, c, xp, xm)
 
-    logL  = _loglik_signed_dcSBM(Ap, An, xp, xm, c, chi_p, chi_m)
+    logL = _loglik_signed_dcSBM(Ap, An, xp, xm, c, chi_p, chi_m)
     kappa = 2 * N + (B * (B + 1))
-    V     = N * (N - 1) / 2.0
+    V = N * (N - 1) / 2.0
     return kappa * math.log(V) - 2.0 * logL
+
 
 class Signed_DC_BIC_Quality:
     """Leiden quality = −BIC for the signed degree-corrected SBM."""
+
     def __init__(self, Ap: np.ndarray, An: np.ndarray, xp: np.ndarray, xm: np.ndarray):
         self.Ap, self.An = Ap, An
         self.xp, self.xm = xp, xm
+
     def __call__(self, part):
-        return -_bic_signed_dcSBM(self.Ap, self.An, self.xp, self.xm, _part2dict(part.flatten()))
+        return -_bic_signed_dcSBM(
+            self.Ap, self.An, self.xp, self.xm, _part2dict(part.flatten())
+        )
+
     def delta(self, part, v, target):
         old = self.__call__(part)
         new = copy(part).move_node(v, target)
         return self.__call__(new) - old
 
-def leiden_signed_dcSBM(G: nx.Graph,
-                        Ap: np.ndarray, An: np.ndarray,
-                        xp: np.ndarray, xm: np.ndarray,
-                        *,
-                        initial=None,
-                        theta: float = 0.3,
-                        gamma: float = 0.0,
-                        random_state: Optional[Union[int, np.random.Generator, random.Random]] = None,
-                        verbose: int | bool = False):
+
+def leiden_signed_dcSBM(
+    G: nx.Graph,
+    Ap: np.ndarray,
+    An: np.ndarray,
+    xp: np.ndarray,
+    xm: np.ndarray,
+    *,
+    initial=None,
+    theta: float = 0.3,
+    gamma: float = 0.0,
+    random_state: Optional[Union[int, np.random.Generator, random.Random]] = None,
+    verbose: int | bool = False,
+):
     """
     One Leiden pass maximizing −BIC for the signed dcSBM.
     """
     if verbose:
         configure_logging(verbose=bool(verbose))
-        logger.info("Leiden (sdcSBM): starting a pass (theta=%.3f, gamma=%.3f)", theta, gamma)
+        logger.info(
+            "Leiden (sdcSBM): starting a pass (theta=%.3f, gamma=%.3f)", theta, gamma
+        )
 
-    return LeidenEngine.run(G, Signed_DC_BIC_Quality(Ap, An, xp, xm), initial, theta, gamma,
-                            random_state=random_state, verbose=verbose)
+    return LeidenEngine.run(
+        G,
+        Signed_DC_BIC_Quality(Ap, An, xp, xm),
+        initial,
+        theta,
+        gamma,
+        random_state=random_state,
+        verbose=verbose,
+    )
+
 
 def iterative_leiden_sdcSBM(
     G: nx.Graph,
@@ -902,31 +1020,48 @@ def iterative_leiden_sdcSBM(
     """
     if verbose:
         configure_logging(verbose=bool(verbose))
-        logger.info("iterative_leiden_sdcSBM: start (max_outer=%d, do_macro_merge=%s, target_K=%s, fix_x_scm=%s)",
-                    max_outer, do_macro_merge, str(target_K), fix_x_scm)
+        logger.info(
+            "iterative_leiden_sdcSBM: start (max_outer=%d, do_macro_merge=%s, target_K=%s, fix_x_scm=%s)",
+            max_outer,
+            do_macro_merge,
+            str(target_K),
+            fix_x_scm,
+        )
 
     # 0) Bootstrap x^+, x^− from SCM
-    k_plus  = Apos.sum(axis=1)
+    k_plus = Apos.sum(axis=1)
     k_minus = Aneg.sum(axis=1)
 
-    m_plus  = Apos.sum() / 2.0
+    m_plus = Apos.sum() / 2.0
     m_minus = Aneg.sum() / 2.0
 
     # conservative positive initial guesses
-    x0_plus  = np.maximum(k_plus,  EPS) / max(1.0, math.sqrt(2.0 * max(m_plus,  1.0)))
+    x0_plus = np.maximum(k_plus, EPS) / max(1.0, math.sqrt(2.0 * max(m_plus, 1.0)))
     x0_minus = np.maximum(k_minus, EPS) / max(1.0, math.sqrt(2.0 * max(m_minus, 1.0)))
 
     xp, xm, _ = solve_SCM_iterative(
-        k_plus, k_minus, x0_plus, x0_minus,
+        k_plus,
+        k_minus,
+        x0_plus,
+        x0_minus,
         # leave defaults for tol/max_iter/patience; centralized in solver
-        verbose=False
+        verbose=False,
     )
 
     # 1) First Leiden pass
-    qf   = Signed_DC_BIC_Quality(Apos, Aneg, xp, xm)
-    part = leiden_signed_dcSBM(G, Apos, Aneg, xp, xm,
-                               initial=initial_partition, theta=theta, gamma=gamma,
-                               random_state=random_state, verbose=verbose)
+    qf = Signed_DC_BIC_Quality(Apos, Aneg, xp, xm)
+    part = leiden_signed_dcSBM(
+        G,
+        Apos,
+        Aneg,
+        xp,
+        xm,
+        initial=initial_partition,
+        theta=theta,
+        gamma=gamma,
+        random_state=random_state,
+        verbose=verbose,
+    )
     if do_macro_merge:
         part = macro_merge_partition(part, qf)
     if target_K is not None:
@@ -948,11 +1083,14 @@ def iterative_leiden_sdcSBM(
             bic0 = _bic_signed_dcSBM(Apos, Aneg, xp, xm, _part2dict(flat), chi_p)
             print("[sdcSBM] Early stop: partition unchanged after first pass.")
             if verbose:
-                logger.info("[sdcSBM] Early stop: partition unchanged after first pass (BIC=%.2f).", bic0)
+                logger.info(
+                    "[sdcSBM] Early stop: partition unchanged after first pass (BIC=%.2f).",
+                    bic0,
+                )
             return copy(flat), bic0
 
     best_part = None
-    best_bic  = float("inf")
+    best_bic = float("inf")
 
     # 2) Outer loop
     for it in range(1, max_outer + 1):
@@ -972,23 +1110,33 @@ def iterative_leiden_sdcSBM(
             R = c.max() + 1
             M = R * (R + 1) // 2
             # flat parameter vector: [x+, x-, chi+_flat, chi-_flat]
-            u0 = np.concatenate([
-                np.maximum(xp, EPS),
-                np.maximum(xm, EPS),
-                np.ones(M),
-                np.ones(M),
-            ])
-            u_opt, _ = solve_signed_dcSBM_iterative(
-                k_plus=k_plus, k_minus=k_minus, c=c,
-                Lp_obs=Lp_obs, Ln_obs=Ln_obs, u_init=u0, method="lm",
-                tol=TOL_SIGNED_DCSBM, max_iter=MAX_IT_DEFAULT, patience=PATIENCE_DEFAULT, verbose=False
+            u0 = np.concatenate(
+                [
+                    np.maximum(xp, EPS),
+                    np.maximum(xm, EPS),
+                    np.ones(M),
+                    np.ones(M),
+                ]
             )
-            xp_ref = u_opt[:Apos.shape[0]]
-            xm_ref = u_opt[Apos.shape[0]:2*Apos.shape[0]]
-            chi_p  = np.zeros((R, R))
-            chi_m  = np.zeros((R, R))
-            flat_plus  = u_opt[2*Apos.shape[0]:2*Apos.shape[0]+M]
-            flat_minus = u_opt[2*Apos.shape[0]+M:2*Apos.shape[0]+2*M]
+            u_opt, _ = solve_signed_dcSBM_iterative(
+                k_plus=k_plus,
+                k_minus=k_minus,
+                c=c,
+                Lp_obs=Lp_obs,
+                Ln_obs=Ln_obs,
+                u_init=u0,
+                method="lm",
+                tol=TOL_SIGNED_DCSBM,
+                max_iter=MAX_IT_DEFAULT,
+                patience=PATIENCE_DEFAULT,
+                verbose=False,
+            )
+            xp_ref = u_opt[: Apos.shape[0]]
+            xm_ref = u_opt[Apos.shape[0] : 2 * Apos.shape[0]]
+            chi_p = np.zeros((R, R))
+            chi_m = np.zeros((R, R))
+            flat_plus = u_opt[2 * Apos.shape[0] : 2 * Apos.shape[0] + M]
+            flat_minus = u_opt[2 * Apos.shape[0] + M : 2 * Apos.shape[0] + 2 * M]
             # unpack flats
             idx = 0
             for r in range(R):
@@ -1007,10 +1155,19 @@ def iterative_leiden_sdcSBM(
             logger.info(msg)
 
         # next Leiden pass
-        qf        = Signed_DC_BIC_Quality(Apos, Aneg, xp_ref, xm_ref)
-        part_next = leiden_signed_dcSBM(G, Apos, Aneg, xp_ref, xm_ref,
-                                        initial=flat, theta=theta, gamma=gamma,
-                                        random_state=random_state, verbose=verbose)
+        qf = Signed_DC_BIC_Quality(Apos, Aneg, xp_ref, xm_ref)
+        part_next = leiden_signed_dcSBM(
+            G,
+            Apos,
+            Aneg,
+            xp_ref,
+            xm_ref,
+            initial=flat,
+            theta=theta,
+            gamma=gamma,
+            random_state=random_state,
+            verbose=verbose,
+        )
         if do_macro_merge:
             part_next = macro_merge_partition(part_next, qf)
         if target_K is not None:
@@ -1026,8 +1183,8 @@ def iterative_leiden_sdcSBM(
             break
 
         flat = flat_next
-        xp   = xp_ref
-        xm   = xm_ref
+        xp = xp_ref
+        xm = xm_ref
 
     # --- Post-hoc exact BIC (when x was frozen) -----------------------------
     if fix_x_scm and best_part is not None:
@@ -1040,26 +1197,36 @@ def iterative_leiden_sdcSBM(
         Lp_obs, Ln_obs = _build_L_obs_signed(Apos, Aneg, c)
         R = c.max() + 1
         M = R * (R + 1) // 2
-        u0 = np.concatenate([
-            np.maximum(xp, EPS),
-            np.maximum(xm, EPS),
-            np.ones(M),
-            np.ones(M),
-        ])
+        u0 = np.concatenate(
+            [
+                np.maximum(xp, EPS),
+                np.maximum(xm, EPS),
+                np.ones(M),
+                np.ones(M),
+            ]
+        )
 
         tol_solver = TOL_SIGNED_DCSBM
         u_opt, best_norm = solve_signed_dcSBM_iterative(
-            k_plus=k_plus, k_minus=k_minus, c=c,
-            Lp_obs=Lp_obs, Ln_obs=Ln_obs, u_init=u0, method="lm",
-            tol=tol_solver, max_iter=MAX_IT_DEFAULT, patience=PATIENCE_DEFAULT, verbose=False
+            k_plus=k_plus,
+            k_minus=k_minus,
+            c=c,
+            Lp_obs=Lp_obs,
+            Ln_obs=Ln_obs,
+            u_init=u0,
+            method="lm",
+            tol=tol_solver,
+            max_iter=MAX_IT_DEFAULT,
+            patience=PATIENCE_DEFAULT,
+            verbose=False,
         )
         if best_norm < tol_solver:
-            xp_hat = u_opt[:Apos.shape[0]]
-            xm_hat = u_opt[Apos.shape[0]:2*Apos.shape[0]]
-            chi_p  = np.zeros((R, R))
-            chi_m  = np.zeros((R, R))
-            flat_plus  = u_opt[2*Apos.shape[0]:2*Apos.shape[0]+M]
-            flat_minus = u_opt[2*Apos.shape[0]+M:2*Apos.shape[0]+2*M]
+            xp_hat = u_opt[: Apos.shape[0]]
+            xm_hat = u_opt[Apos.shape[0] : 2 * Apos.shape[0]]
+            chi_p = np.zeros((R, R))
+            chi_m = np.zeros((R, R))
+            flat_plus = u_opt[2 * Apos.shape[0] : 2 * Apos.shape[0] + M]
+            flat_minus = u_opt[2 * Apos.shape[0] + M : 2 * Apos.shape[0] + 2 * M]
             idx = 0
             for r in range(R):
                 for s in range(r, R):
@@ -1067,16 +1234,25 @@ def iterative_leiden_sdcSBM(
                     chi_m[r, s] = chi_m[s, r] = flat_minus[idx]
                     idx += 1
 
-            true_bic = _bic_signed_dcSBM(Apos, Aneg, xp_hat, xm_hat, _part2dict(flat_final), chi_p)
+            true_bic = _bic_signed_dcSBM(
+                Apos, Aneg, xp_hat, xm_hat, _part2dict(flat_final), chi_p
+            )
             print(f"[sdcSBM] Post-hoc full-parameter BIC (exact): {true_bic:.2f}")
             if verbose:
-                logger.info("[sdcSBM] Post-hoc full-parameter BIC (exact): %.2f", true_bic)
+                logger.info(
+                    "[sdcSBM] Post-hoc full-parameter BIC (exact): %.2f", true_bic
+                )
             best_bic = true_bic
         else:
-            print(f"[sdcSBM] Post-hoc solver did not converge "
-                  f"Keeping fixed-x BIC={best_bic:.2f}.")
+            print(
+                f"[sdcSBM] Post-hoc solver did not converge "
+                f"Keeping fixed-x BIC={best_bic:.2f}."
+            )
             if verbose:
-                logger.warning("[sdcSBM] Post-hoc solver did not converge; keeping fixed-x BIC=%.2f.", best_bic)
+                logger.warning(
+                    "[sdcSBM] Post-hoc solver did not converge; keeping fixed-x BIC=%.2f.",
+                    best_bic,
+                )
         return flat_final, best_bic
 
     return best_part if best_part is not None else flat, best_bic

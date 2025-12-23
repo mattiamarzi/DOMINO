@@ -76,6 +76,7 @@ _INT_TOL = 1e-12
 # Array hygiene helpers
 # -----------------------------------------------------------------------------
 
+
 def _as_float_array(A: Any) -> np.ndarray:
     """
     Return a C-contiguous float64 ndarray view or copy of A.
@@ -157,9 +158,7 @@ def _is_binary_like(M: np.ndarray) -> bool:
     bool
     """
     return bool(
-        np.all(
-            np.isclose(M, 0.0, atol=_INT_TOL) | np.isclose(M, 1.0, atol=_INT_TOL)
-        )
+        np.all(np.isclose(M, 0.0, atol=_INT_TOL) | np.isclose(M, 1.0, atol=_INT_TOL))
     )
 
 
@@ -226,7 +225,9 @@ def _split_signed_layers(
     return Apos, Aneg2
 
 
-def _as_weighted_matrix(W: np.ndarray, allow_abs_on_negative: bool = True) -> np.ndarray:
+def _as_weighted_matrix(
+    W: np.ndarray, allow_abs_on_negative: bool = True
+) -> np.ndarray:
     """
     Ensure a nonnegative, symmetric weighted matrix with zero diagonal.
 
@@ -260,6 +261,7 @@ def _as_weighted_matrix(W: np.ndarray, allow_abs_on_negative: bool = True) -> np
 # -----------------------------------------------------------------------------
 # Initializer handling
 # -----------------------------------------------------------------------------
+
 
 def _build_initializer(
     mode: str,
@@ -310,26 +312,42 @@ def _build_initializer(
         if k == "modularity":
             Aunion = ((Apos > 0) | (Aneg > 0)).astype(int)
             G_mod = nx.from_numpy_array(Aunion, create_using=nx.Graph)
-            comms = list(nx.algorithms.community.greedy_modularity_communities(G_mod, weight="weight"))
+            comms = list(
+                nx.algorithms.community.greedy_modularity_communities(
+                    G_mod, weight="weight"
+                )
+            )
             return [set(C) for C in comms]
         if k in {"pos_modularity", "positive_modularity"}:
             G_pos = nx.from_numpy_array(Apos, create_using=nx.Graph)
-            comms = list(nx.algorithms.community.greedy_modularity_communities(G_pos, weight="weight"))
+            comms = list(
+                nx.algorithms.community.greedy_modularity_communities(
+                    G_pos, weight="weight"
+                )
+            )
             return [set(C) for C in comms]
-        raise ValueError("For mode='signed', initial_partition must be 'modularity' or 'pos_modularity'.")
+        raise ValueError(
+            "For mode='signed', initial_partition must be 'modularity' or 'pos_modularity'."
+        )
 
     if mode == "weighted":
         if W is None:
             W = _as_weighted_matrix(A)
         if k == "modularity":
             G_w = nx.from_numpy_array(W, create_using=nx.Graph)
-            comms = list(nx.algorithms.community.greedy_modularity_communities(G_w, weight="weight"))
+            comms = list(
+                nx.algorithms.community.greedy_modularity_communities(
+                    G_w, weight="weight"
+                )
+            )
             return [set(C) for C in comms]
         raise ValueError("For mode='weighted', initial_partition must be 'modularity'.")
 
     # mode == "binary"
     if k == "modularity":
-        comms = list(nx.algorithms.community.greedy_modularity_communities(G, weight="weight"))
+        comms = list(
+            nx.algorithms.community.greedy_modularity_communities(G, weight="weight")
+        )
         return [set(C) for C in comms]
     raise ValueError("For mode='binary', initial_partition must be 'modularity'.")
 
@@ -375,6 +393,7 @@ def _maybe_make_initializer(
 # -----------------------------------------------------------------------------
 # Public core API: detect_communities
 # -----------------------------------------------------------------------------
+
 
 def detect_communities(
     G: nx.Graph,
@@ -486,9 +505,13 @@ def detect_communities(
             )
 
         if not np.any(Aneg_eff):
-            raise ValueError("mode='signed' requires at least one negative edge, but none were found.")
+            raise ValueError(
+                "mode='signed' requires at least one negative edge, but none were found."
+            )
 
-        init = _maybe_make_initializer("signed", initial_partition, G=G, A=M, Apos=Apos, Aneg=Aneg_eff)
+        init = _maybe_make_initializer(
+            "signed", initial_partition, G=G, A=M, Apos=Apos, Aneg=Aneg_eff
+        )
 
         if degree_corrected:
             return iterative_leiden_sdcSBM(
@@ -558,7 +581,10 @@ def detect_communities(
 # High-level API: detect (post-processing adapter)
 # -----------------------------------------------------------------------------
 
-def _normalize_post_arg(arg: Union[bool, Dict[str, Any]]) -> Tuple[bool, Dict[str, Any]]:
+
+def _normalize_post_arg(
+    arg: Union[bool, Dict[str, Any]],
+) -> Tuple[bool, Dict[str, Any]]:
     """
     Normalize a post-processing control argument.
 
@@ -661,7 +687,9 @@ def detect(
     # The implementation attempts the newer signature first and falls back on TypeError.
     def _call_process_graph_signed(Apos2: np.ndarray, Aneg2: np.ndarray) -> Any:
         try:
-            return process_graph(G, part, Apos=Apos2, Aneg=Aneg2, viz=viz, report=report)
+            return process_graph(
+                G, part, Apos=Apos2, Aneg=Aneg2, viz=viz, report=report
+            )
         except TypeError:
             return process_graph(G, part, Apos=Apos2, Aneg=Aneg2, **post_kwargs)
 

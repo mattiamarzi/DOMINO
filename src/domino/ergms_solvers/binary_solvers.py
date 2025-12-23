@@ -26,8 +26,8 @@ from ..utils.constants import (
     EPS,  # 1e-12
     MAX_IT_DEFAULT,  # 1000
     PATIENCE_DEFAULT,  # 10
-    TOL_DCSBM,  # 1e-6  
-    TOL_UBCM,  # 1e-6 
+    TOL_DCSBM,  # 1e-6
+    TOL_UBCM,  # 1e-6
 )
 
 # ---------------------------------------------------------------------------
@@ -44,6 +44,7 @@ logger = logging.getLogger("domino.ergms.binary")
 # ---------------------------------------------------------------------------
 # UBCM SOLVER
 # ---------------------------------------------------------------------------
+
 
 @njit(cache=True, fastmath=True)
 def _residuals_UBCM_log(u: np.ndarray, k: np.ndarray) -> np.ndarray:
@@ -124,8 +125,13 @@ def solve_UBCM_iterative(
         Residual 2-norm at the best iterate.
     """
     if verbose:
-        logger.info("UBCM: starting solve (method=%s, tol=%.1e, max_iter=%d, patience=%d)",
-                    method, tol, max_iter, patience)
+        logger.info(
+            "UBCM: starting solve (method=%s, tol=%.1e, max_iter=%d, patience=%d)",
+            method,
+            tol,
+            max_iter,
+            patience,
+        )
 
     # Guard against zeros to keep logs finite.
     z0 = np.log(np.maximum(x_init, EPS))
@@ -137,11 +143,19 @@ def solve_UBCM_iterative(
     for i in range(max_iter):
         # One nonlinear step
         if method == "krylov":
-            u_curr = newton_krylov(lambda u: _residuals_UBCM_log(u, k),
-                                   z0, method="lgmres", inner_maxiter=100)
+            u_curr = newton_krylov(
+                lambda u: _residuals_UBCM_log(u, k),
+                z0,
+                method="lgmres",
+                inner_maxiter=100,
+            )
         else:
-            sol = root(lambda u: _residuals_UBCM_log(u, k),
-                       x0=z0, method=method, options={"maxfev": 10000})
+            sol = root(
+                lambda u: _residuals_UBCM_log(u, k),
+                x0=z0,
+                method=method,
+                options={"maxfev": 10000},
+            )
             u_curr = sol.x
 
         curr_norm = np.linalg.norm(_residuals_UBCM_log(u_curr, k))
@@ -155,21 +169,33 @@ def solve_UBCM_iterative(
             no_improve += 1
 
         if verbose:
-            logger.info("UBCM: iter=%d  ||res||=%.3e  best=%.3e  no_improve=%d",
-                        i + 1, curr_norm, best_norm, no_improve)
+            logger.info(
+                "UBCM: iter=%d  ||res||=%.3e  best=%.3e  no_improve=%d",
+                i + 1,
+                curr_norm,
+                best_norm,
+                no_improve,
+            )
 
         # Stopping conditions
         if curr_norm < tol:
             best_u = u_curr.copy()
             if verbose:
-                logger.info("UBCM: converged at iter %d with ||res||=%.3e", i + 1, curr_norm)
+                logger.info(
+                    "UBCM: converged at iter %d with ||res||=%.3e", i + 1, curr_norm
+                )
             break
         if no_improve >= patience:
-            logger.warning("UBCM solver: stopping after %d no-improve iterations at iter %d.",
-                           patience, i + 1)
+            logger.warning(
+                "UBCM solver: stopping after %d no-improve iterations at iter %d.",
+                patience,
+                i + 1,
+            )
             break
         if i == max_iter - 1:
-            logger.warning("UBCM solver: maximum iterations reached before convergence.")
+            logger.warning(
+                "UBCM solver: maximum iterations reached before convergence."
+            )
 
         # Warm start next step
         z0 = u_curr.copy()
@@ -180,6 +206,7 @@ def solve_UBCM_iterative(
 # ---------------------------------------------------------------------------
 # degree-corrected SBM (dcSBM) SOLVER
 # ---------------------------------------------------------------------------
+
 
 def _make_block_struct(c: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """
@@ -216,7 +243,7 @@ def _residuals_numba(
     c: np.ndarray,
     L_obs: np.ndarray,
     block_pairs: np.ndarray,
-    idx_map: np.ndarray
+    idx_map: np.ndarray,
 ) -> np.ndarray:
     """
     Parallel dcSBM residuals in log-parameter space using per-thread accumulators
@@ -266,7 +293,7 @@ def _residuals_numba(
 
     # Static partitioning of i-range into T tiles: [i0, i1)
     base = N // T
-    rem  = N % T
+    rem = N % T
 
     for t in prange(T):
         i0 = t * base + (t if t < rem else rem)
@@ -361,8 +388,13 @@ def solve_dcSBM_iterative(
         Residual 2-norm at the best solution found.
     """
     if verbose:
-        logger.info("dcSBM: starting solve (method=%s, tol=%.1e, max_iter=%d, patience=%d)",
-                    method, tol, max_iter, patience)
+        logger.info(
+            "dcSBM: starting solve (method=%s, tol=%.1e, max_iter=%d, patience=%d)",
+            method,
+            tol,
+            max_iter,
+            patience,
+        )
 
     # Precompute block structure and wrap residual function in log-space
     block_pairs, idx_map = _make_block_struct(c)
@@ -371,8 +403,8 @@ def solve_dcSBM_iterative(
         return _residuals_numba(logu, k, c, L_obs, block_pairs, idx_map)
 
     # Initialize logs (guarded to keep logs finite)
-    alpha0 = np.log(np.maximum(u_init[:k.size], EPS))
-    beta0  = np.log(np.maximum(u_init[k.size:], EPS))
+    alpha0 = np.log(np.maximum(u_init[: k.size], EPS))
+    beta0 = np.log(np.maximum(u_init[k.size :], EPS))
     z0 = np.concatenate([alpha0, beta0])
 
     best_z = z0.copy()
@@ -384,8 +416,9 @@ def solve_dcSBM_iterative(
         if method == "newton":
             z_curr = newton_krylov(f_res, z0, method="lgmres", inner_maxiter=100)
         else:
-            sol = root(f_res, x0=z0, method=method, tol=tol,
-                       options={"maxfev": 100 * z0.size})
+            sol = root(
+                f_res, x0=z0, method=method, tol=tol, options={"maxfev": 100 * z0.size}
+            )
             z_curr = sol.x
 
         norm_curr = np.linalg.norm(f_res(z_curr))
@@ -399,21 +432,33 @@ def solve_dcSBM_iterative(
             no_improve += 1
 
         if verbose:
-            logger.info("dcSBM: iter=%d  ||res||=%.3e  best=%.3e  no_improve=%d",
-                        it + 1, norm_curr, best_norm, no_improve)
+            logger.info(
+                "dcSBM: iter=%d  ||res||=%.3e  best=%.3e  no_improve=%d",
+                it + 1,
+                norm_curr,
+                best_norm,
+                no_improve,
+            )
 
         # Stopping conditions
         if norm_curr < tol:
             best_z = z_curr.copy()
             if verbose:
-                logger.info("dcSBM: converged at iter %d with ||res||=%.3e", it + 1, norm_curr)
+                logger.info(
+                    "dcSBM: converged at iter %d with ||res||=%.3e", it + 1, norm_curr
+                )
             break
         if no_improve >= patience:
-            logger.warning("dcSBM solver: stopped after %d no-improve at iter %d.",
-                           patience, it + 1)
+            logger.warning(
+                "dcSBM solver: stopped after %d no-improve at iter %d.",
+                patience,
+                it + 1,
+            )
             break
         if it == max_iter - 1:
-            logger.warning("dcSBM solver: maximum iterations reached before reaching convergence.")
+            logger.warning(
+                "dcSBM solver: maximum iterations reached before reaching convergence."
+            )
 
         # Warm start next step
         z0 = z_curr.copy()

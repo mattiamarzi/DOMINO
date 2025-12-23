@@ -216,7 +216,7 @@ class LeidenEngine:
         quality: CommunityQuality[T],
         theta: float,
         gamma: float,
-        py_rng: random.Random
+        py_rng: random.Random,
     ) -> Partition[T]:
         """
         Refine each community independently by allowing a node to merge with
@@ -247,7 +247,9 @@ class LeidenEngine:
 
         refined = Partition.singleton_partition(G, Keys.WEIGHT)
         for block in part:
-            refined = LeidenEngine._merge_within_subset(G, refined, quality, theta, gamma, block, py_rng)
+            refined = LeidenEngine._merge_within_subset(
+                G, refined, quality, theta, gamma, block, py_rng
+            )
         return refined
 
     @staticmethod
@@ -258,7 +260,7 @@ class LeidenEngine:
         theta: float,
         gamma: float,
         subset: Set[T],
-        py_rng: random.Random
+        py_rng: random.Random,
     ) -> Partition[T]:
         """
         Within a given subset (a community of the previous level), consider moving
@@ -302,7 +304,9 @@ class LeidenEngine:
                 eligible.append(v)
             else:
                 bndry = cut_size_singleton(G, v, subset_set - {v}, weight=Keys.WEIGHT)
-                if bndry >= gamma * node_weight_total(G, v) * (total_size - node_weight_total(G, v)):
+                if bndry >= gamma * node_weight_total(G, v) * (
+                    total_size - node_weight_total(G, v)
+                ):
                     eligible.append(v)
 
         if not eligible:
@@ -324,7 +328,9 @@ class LeidenEngine:
                 ok_targets = []
                 for C in cand_sets:
                     cut_CS = nx.cut_size(G, C, subset_set - set(C), weight=Keys.WEIGHT)
-                    if cut_CS >= gamma * node_weight_total(G, C) * (total_size - node_weight_total(G, C)):
+                    if cut_CS >= gamma * node_weight_total(G, C) * (
+                        total_size - node_weight_total(G, C)
+                    ):
                         ok_targets.append(C)
                 cand_sets = ok_targets
                 if not cand_sets:
@@ -339,17 +345,21 @@ class LeidenEngine:
             # Softmax over (non-negative) Δq with numerical stabilization by max subtraction.
             max_dq = max(dq for (_, dq) in improvements)
             weights = []
-            for (_, dq) in improvements:
+            for _, dq in improvements:
                 x = (dq - max_dq) / max(theta, 1e-12)
                 # Guard the exp to avoid over/underflow.
                 x = 700.0 if x > 700.0 else (-700.0 if x < -700.0 else x)
-                weights.append(math.e ** x)
+                weights.append(math.e**x)
 
             # Deterministic selection using the provided RNG:
             # If all weights vanish, fall back to strict argmax.
-            chosen = (max(improvements, key=lambda t: t[1])[0]
-                      if sum(weights) <= 0.0
-                      else py_rng.choices([c for (c, _) in improvements], weights=weights, k=1)[0])
+            chosen = (
+                max(improvements, key=lambda t: t[1])[0]
+                if sum(weights) <= 0.0
+                else py_rng.choices(
+                    [c for (c, _) in improvements], weights=weights, k=1
+                )[0]
+            )
 
             if hasattr(quality, "apply_move"):
                 quality.apply_move(part, v, chosen)
@@ -359,9 +369,7 @@ class LeidenEngine:
 
 
 def merge_communities(
-    part: Partition[T],
-    comm_idx_a: int,
-    comm_idx_b: int
+    part: Partition[T], comm_idx_a: int, comm_idx_b: int
 ) -> Partition[T]:
     """
     Create a new partition by merging community `comm_idx_b` into `comm_idx_a`.
@@ -376,9 +384,7 @@ def merge_communities(
 
 
 def macro_merge_partition(
-    part: Partition[T],
-    quality_fn: CommunityQuality[T],
-    max_checks: int = 1000
+    part: Partition[T], quality_fn: CommunityQuality[T], max_checks: int = 1000
 ) -> Partition[T]:
     """
     Greedy macro-level merging across communities: try pairs (i, j) in order

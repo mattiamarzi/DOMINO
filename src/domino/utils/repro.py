@@ -37,6 +37,7 @@ Notes
   Library modules should create loggers with names like "domino.submodule" and
   avoid configuring handlers themselves.
 """
+
 from __future__ import annotations
 
 import logging
@@ -47,8 +48,9 @@ import numpy as np
 
 Number = Union[int, np.integer]
 
+
 def coerce_random_state(
-    random_state: Optional[Union[Number, np.random.Generator, random.Random]]
+    random_state: Optional[Union[Number, np.random.Generator, random.Random]],
 ) -> Tuple[np.random.Generator, random.Random]:
     """
     Return (np_rng, py_rng) objects from user-provided random_state.
@@ -78,10 +80,14 @@ def coerce_random_state(
         seed = py_rng.getrandbits(32)
         return (np.random.default_rng(seed), py_rng)
 
-    raise TypeError("random_state must be None, int, np.random.Generator, or random.Random")
+    raise TypeError(
+        "random_state must be None, int, np.random.Generator, or random.Random"
+    )
 
 
-def configure_logging(verbose: int | bool = False, logger_name: str = "domino") -> logging.Logger:
+def configure_logging(
+    verbose: int | bool = False, logger_name: str = "domino"
+) -> logging.Logger:
     """
     Create/return a package logger. If verbose truthy, set INFO; else WARNING.
     """
