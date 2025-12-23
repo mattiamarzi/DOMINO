@@ -1,4 +1,4 @@
-# DOMINO, Leiden + BIC mesoscale detection
+# DOMINO - Detection Of MesoscopIc structures via iNfOrmation criteria
 
 DOMINO is a mesoscale detection framework that combines **Leiden optimization**
 with **Bayesian Information Criterion (BIC) minimization** under several
