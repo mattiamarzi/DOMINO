@@ -24,10 +24,11 @@ Implementation notes
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Collection, Iterable, Iterator, Set
 from copy import deepcopy
-from typing import Callable, Generic, TypeVar, Union, cast, Dict, Optional
-import logging
+from typing import Callable, Dict, Generic, Optional, TypeVar, Union, cast
+
 import networkx as nx
 from networkx.algorithms.community import community_utils
 

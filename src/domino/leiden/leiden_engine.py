@@ -12,28 +12,31 @@ and the function
 
 from __future__ import annotations
 
+import logging
+import math
+import random
+from collections import deque
 from collections.abc import Set
-from typing import TypeVar, Optional, Dict, Union
+from copy import copy as _shallow_copy
+from copy import deepcopy
+from typing import Dict, Optional, TypeVar, Union
+
 import networkx as nx
 import numpy as np
 from networkx import Graph
-from copy import deepcopy
-from collections import deque
-from copy import copy as _shallow_copy
-import math
-import random
-import logging
 
-from .scoring import CommunityQuality
-from .partitions_functions import (
-    GraphKeys as Keys,
-    Partition,
-    node_weight_total,
-    ensure_edge_weights,
-    cut_size_singleton,
-)
 # Reproducibility & logging helpers (placed under utils/)
 from ..utils.repro import coerce_random_state, configure_logging
+from .partitions_functions import (
+    GraphKeys as Keys,
+)
+from .partitions_functions import (
+    Partition,
+    cut_size_singleton,
+    ensure_edge_weights,
+    node_weight_total,
+)
+from .scoring import CommunityQuality
 
 T = TypeVar("T")
 logger = logging.getLogger("domino.leiden")

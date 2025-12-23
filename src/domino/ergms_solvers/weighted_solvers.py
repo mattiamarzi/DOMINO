@@ -53,14 +53,15 @@ from scipy.optimize import OptimizeWarning, newton_krylov, root
 # Centralized numeric constants & defaults (kept equal to legacy defaults)
 # ---------------------------------------------------------------------------
 from ..utils.constants import (
-    EPS,                 # universal epsilon to guard logs (e.g., 1e-12)
-    U_MIN, U_MAX,        # clamps for log-parameters in WCM
-    X_MIN,               # floor for x_i in WCM
-    Z_MIN,               # lower bound on z = x_i x_j [χ_{rs}]
-    TOL_WCM,             # default tolerance for WCM
-    TOL_WDCSBM,          # default tolerance for weighted dcSBM
-    MAX_IT_DEFAULT,      # default max outer iterations
-    PATIENCE_DEFAULT,    # default patience for no-improve early stop
+    EPS,  # universal epsilon to guard logs (e.g., 1e-12)
+    MAX_IT_DEFAULT,  # default max outer iterations
+    PATIENCE_DEFAULT,  # default patience for no-improve early stop
+    TOL_WCM,  # default tolerance for WCM
+    TOL_WDCSBM,  # default tolerance for weighted dcSBM
+    U_MAX,
+    U_MIN,  # clamps for log-parameters in WCM
+    X_MIN,  # floor for x_i in WCM
+    Z_MIN,  # lower bound on z = x_i x_j [χ_{rs}]
 )
 
 # ---------------------------------------------------------------------------

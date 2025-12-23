@@ -55,14 +55,16 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, Optional, Tuple, Union
 
-import numpy as np
 import networkx as nx
+import numpy as np
 
+from .bic_minimization.binary_bic import iterative_leiden_dcSBM, iterative_leiden_SBM
+from .bic_minimization.signed_bic import iterative_leiden_sdcSBM, iterative_leiden_sSBM
+from .bic_minimization.weighted_bic import (
+    iterative_leiden_wdcSBM,
+    iterative_leiden_wSBM,
+)
 from .leiden.partitions_functions import Partition
-
-from .bic_minimization.binary_bic import iterative_leiden_SBM, iterative_leiden_dcSBM
-from .bic_minimization.signed_bic import iterative_leiden_sSBM, iterative_leiden_sdcSBM
-from .bic_minimization.weighted_bic import iterative_leiden_wSBM, iterative_leiden_wdcSBM
 
 logger = logging.getLogger("domino.detect")
 
@@ -638,7 +640,9 @@ def detect(
         return out
 
     # Import locally to avoid hard coupling core solver logic to plotting stacks.
-    from .represent_and_analyze import process_graph  # pylint: disable=import-outside-toplevel
+    from .represent_and_analyze import (
+        process_graph,  # pylint: disable=import-outside-toplevel
+    )
 
     mode2 = mode.lower().strip()
 

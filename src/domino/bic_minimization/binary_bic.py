@@ -22,32 +22,35 @@ This module provides:
 
 from __future__ import annotations
 
-import os
-import math
 import logging
+import math
+import os
 import random
 from copy import copy
-from typing import Dict, Tuple, Optional, Union, List
+from typing import Dict, List, Optional, Tuple, Union
 
-import numpy as np
 import networkx as nx
+import numpy as np
 from numba import njit, prange, set_num_threads
 
-from ..leiden.leiden_engine import LeidenEngine, macro_merge_partition, merge_communities
+from ..ergms_solvers.binary_solvers import solve_dcSBM_iterative, solve_UBCM_iterative
+from ..leiden.leiden_engine import (
+    LeidenEngine,
+    macro_merge_partition,
+    merge_communities,
+)
 from ..leiden.partitions_functions import Partition
-from ..ergms_solvers.binary_solvers import solve_UBCM_iterative, solve_dcSBM_iterative
 
 # Centralised constants
 from ..utils.constants import (
-    EPS,                 # small epsilon for safe logs / divisions
-    MAX_IT_DEFAULT,      # default outer-iteration cap for solvers
-    PATIENCE_DEFAULT,    # default patience for early-stop in solvers
-    TOL_DCSBM,           # default tol for dcSBM root-finding
-    TOL_CHI,             # tolerance for block-χ Newton slice
-    MAX_IT_CHI,          # max Newton steps for block-χ slice
-    CHI_CAP,             # cap on χ when a block is fully connected
+    CHI_CAP,  # cap on χ when a block is fully connected
+    EPS,  # small epsilon for safe logs / divisions
+    MAX_IT_CHI,  # max Newton steps for block-χ slice
+    MAX_IT_DEFAULT,  # default outer-iteration cap for solvers
+    PATIENCE_DEFAULT,  # default patience for early-stop in solvers
+    TOL_CHI,  # tolerance for block-χ Newton slice
+    TOL_DCSBM,  # default tol for dcSBM root-finding
 )
-
 from ..utils.repro import configure_logging
 
 # -----------------------------------------------------------------------------

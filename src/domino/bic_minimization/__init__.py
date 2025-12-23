@@ -70,9 +70,9 @@ Weighted (geometric):
 
 from __future__ import annotations
 
-from .binary_bic import iterative_leiden_SBM, iterative_leiden_dcSBM
-from .signed_bic import iterative_leiden_sSBM, iterative_leiden_sdcSBM
-from .weighted_bic import iterative_leiden_wSBM, iterative_leiden_wdcSBM
+from .binary_bic import iterative_leiden_dcSBM, iterative_leiden_SBM
+from .signed_bic import iterative_leiden_sdcSBM, iterative_leiden_sSBM
+from .weighted_bic import iterative_leiden_wdcSBM, iterative_leiden_wSBM
 
 __all__ = [
     "iterative_leiden_SBM",

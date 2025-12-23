@@ -11,8 +11,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Tuple
 
-import numpy as np
 import networkx as nx
+import numpy as np
 
 
 @dataclass(frozen=True)
@@ -45,7 +45,7 @@ def _ensure_connected_binary(A: np.ndarray, rng: np.random.Generator) -> np.ndar
     A2 = A.copy()
     comps = [list(c) for c in nx.connected_components(G)]
     reps = [c[rng.integers(0, len(c))] for c in comps]
-    for u, v in zip(reps[:-1], reps[1:]):
+    for u, v in zip(reps[:-1], reps[1:], strict=False):
         A2[u, v] = 1
         A2[v, u] = 1
     np.fill_diagonal(A2, 0)
@@ -61,7 +61,7 @@ def _ensure_connected_weighted(W: np.ndarray, rng: np.random.Generator) -> np.nd
     W2 = W.copy()
     comps = [list(c) for c in nx.connected_components(G)]
     reps = [c[rng.integers(0, len(c))] for c in comps]
-    for u, v in zip(reps[:-1], reps[1:]):
+    for u, v in zip(reps[:-1], reps[1:], strict=False):
         W2[u, v] = max(W2[u, v], 1.0)
         W2[v, u] = max(W2[v, u], 1.0)
     np.fill_diagonal(W2, 0.0)

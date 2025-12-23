@@ -47,18 +47,16 @@ Notes on parameters
 
 from __future__ import annotations
 
+from .leiden_engine import LeidenEngine, macro_merge_partition, merge_communities
 from .partitions_functions import (
-    Partition,
     GraphKeys,
-    freeze_sets,
+    Partition,
     argmax,
-    node_weight_total,
-    ensure_edge_weights,
     cut_size_singleton,
+    ensure_edge_weights,
+    freeze_sets,
+    node_weight_total,
 )
-
-from .leiden_engine import LeidenEngine, merge_communities, macro_merge_partition
-
 from .scoring import CommunityQuality
 
 __all__ = [

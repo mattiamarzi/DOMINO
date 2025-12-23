@@ -54,7 +54,7 @@ Weighted:
 
 from __future__ import annotations
 
-from .binary_solvers import solve_UBCM_iterative, solve_dcSBM_iterative
+from .binary_solvers import solve_dcSBM_iterative, solve_UBCM_iterative
 from .signed_solvers import solve_SCM_iterative, solve_signed_dcSBM_iterative
 from .weighted_solvers import solve_WCM_iterative, solve_wdcSBM_iterative
 

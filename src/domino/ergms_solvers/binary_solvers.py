@@ -16,17 +16,18 @@ from __future__ import annotations
 import logging
 import warnings
 from typing import Tuple
+
 import numpy as np
-from numba import njit, prange, get_num_threads
-from scipy.optimize import OptimizeWarning, root, newton_krylov
+from numba import get_num_threads, njit, prange
+from scipy.optimize import OptimizeWarning, newton_krylov, root
 
 # Centralized numeric constants (kept equal to legacy defaults)
 from ..utils.constants import (
-    EPS,                 # 1e-12
-    TOL_UBCM,            # 1e-6 
-    TOL_DCSBM,           # 1e-6  
-    MAX_IT_DEFAULT,      # 1000
-    PATIENCE_DEFAULT,    # 10
+    EPS,  # 1e-12
+    MAX_IT_DEFAULT,  # 1000
+    PATIENCE_DEFAULT,  # 10
+    TOL_DCSBM,  # 1e-6  
+    TOL_UBCM,  # 1e-6 
 )
 
 # ---------------------------------------------------------------------------

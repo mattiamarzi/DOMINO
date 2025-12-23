@@ -34,30 +34,35 @@ This mirrors the binary/signed BIC modules:
 
 from __future__ import annotations
 
-import os
-import math
 import logging
+import math
+import os
 import random
 from copy import copy
-from typing import Dict, Tuple, Optional, List, Union
-import numpy as np
+from typing import Dict, List, Optional, Tuple, Union
+
 import networkx as nx
+import numpy as np
 from numba import njit, set_num_threads
 
-from ..leiden.leiden_engine import LeidenEngine, macro_merge_partition, merge_communities
-from ..leiden.partitions_functions import Partition
 from ..ergms_solvers.weighted_solvers import (
     solve_WCM_iterative,
     solve_wdcSBM_iterative,
 )
+from ..leiden.leiden_engine import (
+    LeidenEngine,
+    macro_merge_partition,
+    merge_communities,
+)
+from ..leiden.partitions_functions import Partition
 
 # Centralized numeric constants
 from ..utils.constants import (
-    EPS,                 # 1e-12
-    Z_MIN,               # 1e-12 (lower bound for z = x_i x_j [χ_rs])
-    MAX_IT_DEFAULT,      # 1000
-    PATIENCE_DEFAULT,    # 10
-    TOL_WDCSBM,          # 1e-6 (default tol for weighted dcSBM solver)
+    EPS,  # 1e-12
+    MAX_IT_DEFAULT,  # 1000
+    PATIENCE_DEFAULT,  # 10
+    TOL_WDCSBM,  # 1e-6 (default tol for weighted dcSBM solver)
+    Z_MIN,  # 1e-12 (lower bound for z = x_i x_j [χ_rs])
 )
 
 # Optional logging helpers (safe no-ops if caller already configured logging)
@@ -98,8 +103,11 @@ def _build_L_obs_weighted(A: np.ndarray, c: np.ndarray) -> np.ndarray:
     iu, ju = np.triu_indices_from(A, k=1)
     w = A[iu, ju]
     nz = w != 0
-    iu = iu[nz]; ju = ju[nz]; w = w[nz]
-    ci = c[iu];  cj = c[ju]
+    iu = iu[nz]
+    ju = ju[nz]
+    w = w[nz]
+    ci = c[iu]
+    cj = c[ju]
     same = (ci == cj)
     if np.any(same):
         np.add.at(L, (ci[same], cj[same]), w[same])  # ci==cj → diagonal
@@ -309,7 +317,7 @@ def _split_largest_community_with_leiden_wSBM(
 
     iu, ju = np.triu_indices(n_sub, k=1)
     mask = A_sub[iu, ju] != 0
-    edges = [(int(i), int(j)) for i, j, ok in zip(iu, ju, mask) if ok]
+    edges = [(int(i), int(j)) for i, j, ok in zip(iu, ju, mask, strict=False) if ok]
     if not edges:
         # Community is internally edgeless
         return part_flat

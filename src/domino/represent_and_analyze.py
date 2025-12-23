@@ -13,16 +13,16 @@ Exports (stable API):
 
 from __future__ import annotations
 
-import math
 import logging
+import math
 import random
-from typing import Any, Dict, List, Tuple, Optional, Union, Iterable
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
-import numpy as np
-import networkx as nx
 import matplotlib.pyplot as plt
-from matplotlib.patches import Patch, Rectangle
+import networkx as nx
+import numpy as np
 from matplotlib.lines import Line2D
+from matplotlib.patches import Patch, Rectangle
 from scipy import sparse
 
 logger = logging.getLogger("domino.viz")
@@ -594,7 +594,7 @@ def plot_reordered_signed_adjacency(
 
     if n <= max_n_dense:
         M = S_ord.toarray()
-        from matplotlib.colors import ListedColormap, BoundaryNorm
+        from matplotlib.colors import BoundaryNorm, ListedColormap
         cmap = ListedColormap(["#d62728", "white", "#1f77b4"])
         norm = BoundaryNorm([-1.5, -0.5, 0.5, 1.5], cmap.N)
         ax.imshow(M, interpolation="nearest", aspect="equal", cmap=cmap, norm=norm)

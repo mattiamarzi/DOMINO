@@ -4,7 +4,6 @@ from __future__ import annotations
 # The domino package uses a src-layout (src/domino/). During development,
 # some public symbols may migrate across submodules. The import below keeps
 # the public API stable while avoiding hard failures at import time.
-
 from .repro import coerce_random_state
 
 try:

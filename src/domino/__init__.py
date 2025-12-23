@@ -25,6 +25,7 @@ from __future__ import annotations
 # Silence Intel OpenMP deprecation messages (must run before importing numpy/scipy/numba)
 # -----------------------------------------------------------------------------
 import os
+
 os.environ.setdefault("KMP_WARNINGS", "0")
 
 import logging

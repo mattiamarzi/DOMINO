@@ -19,11 +19,11 @@ Optional hooks recognized by the Leiden engine (not required here):
 
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
 from collections.abc import Set as SetABC
 from copy import copy as shallow_copy
 from typing import Generic, TypeVar
-import logging
 
 from .partitions_functions import Partition
 

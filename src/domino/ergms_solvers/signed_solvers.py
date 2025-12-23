@@ -40,11 +40,11 @@ from scipy.optimize import OptimizeWarning, newton_krylov, root
 # Centralized numeric constants (keep behavior consistent across modules)
 # ---------------------------------------------------------------------------
 from ..utils.constants import (
-    EPS,                 # universal small epsilon (e.g., 1e-12)
-    TOL_SIGNED_SCM,      # default residual tolerance for SCM (e.g., 1e-9)
-    TOL_SIGNED_DCSBM,    # default residual tolerance for signed dcSBM (e.g., 1e-6)
-    MAX_IT_DEFAULT,      # outer-loop max iterations (e.g., 1000)
-    PATIENCE_DEFAULT,    # early-stop patience (e.g., 10)
+    EPS,  # universal small epsilon (e.g., 1e-12)
+    MAX_IT_DEFAULT,  # outer-loop max iterations (e.g., 1000)
+    PATIENCE_DEFAULT,  # early-stop patience (e.g., 10)
+    TOL_SIGNED_DCSBM,  # default residual tolerance for signed dcSBM (e.g., 1e-6)
+    TOL_SIGNED_SCM,  # default residual tolerance for SCM (e.g., 1e-9)
 )
 
 # ---------------------------------------------------------------------------
@@ -306,7 +306,8 @@ def _residuals_signed_dcSBM_log(
         bm = blkm_local[t]
 
         for i in range(i0, i1):
-            xpi = xp[i]; xmi = xm[i]
+            xpi = xp[i]
+            xmi = xm[i]
             ci = c[i]
             for j in range(i + 1, N):
                 cj = c[j]

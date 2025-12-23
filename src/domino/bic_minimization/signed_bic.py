@@ -18,32 +18,37 @@ experience alongside `binary_bic.py`.
 
 from __future__ import annotations
 
-import os
-import math
 import logging
+import math
+import os
 import random
 from copy import copy
-from typing import Dict, Tuple, Optional, Union
-import numpy as np
+from typing import Dict, Optional, Tuple, Union
+
 import networkx as nx
+import numpy as np
 from numba import njit, prange, set_num_threads
 
-from ..leiden.leiden_engine import LeidenEngine, macro_merge_partition, merge_communities
-from ..leiden.partitions_functions import Partition
 from ..ergms_solvers.signed_solvers import (
     solve_SCM_iterative,
     solve_signed_dcSBM_iterative,
 )
+from ..leiden.leiden_engine import (
+    LeidenEngine,
+    macro_merge_partition,
+    merge_communities,
+)
+from ..leiden.partitions_functions import Partition
 
 # Centralized constants (kept equal to legacy defaults where they existed)
 from ..utils.constants import (
-    EPS,                  # 1e-12
-    CHI_CAP,              # 1e12  (cap for fully connected block-pairs)
-    TOL_SIGNED_DCSBM,     # 1e-6  (solver tolerance)
-    MAX_IT_DEFAULT,       # 1000  (outer iteration cap for solvers)
-    PATIENCE_DEFAULT,     # 10    (early-stop patience)
-    TOL_CHI,              # 1e-6  (Newton tol for χ slices)
-    MAX_IT_CHI,           # 20    (Newton max iters for χ slices)
+    CHI_CAP,  # 1e12  (cap for fully connected block-pairs)
+    EPS,  # 1e-12
+    MAX_IT_CHI,  # 20    (Newton max iters for χ slices)
+    MAX_IT_DEFAULT,  # 1000  (outer iteration cap for solvers)
+    PATIENCE_DEFAULT,  # 10    (early-stop patience)
+    TOL_CHI,  # 1e-6  (Newton tol for χ slices)
+    TOL_SIGNED_DCSBM,  # 1e-6  (solver tolerance)
 )
 
 # Optional helpers (no-ops if caller already configured logging)
@@ -320,7 +325,7 @@ def _split_largest_community_with_leiden_sSBM(
 
     iu, ju = np.triu_indices(n_sub, k=1)
     mask = (Ap_sub[iu, ju] != 0) | (An_sub[iu, ju] != 0)
-    edges = [(int(i), int(j)) for i, j, ok in zip(iu, ju, mask) if ok]
+    edges = [(int(i), int(j)) for i, j, ok in zip(iu, ju, mask, strict=False) if ok]
     if not edges:
         # Community is internally edgeless, nothing meaningful to split
         return part_flat
@@ -738,12 +743,16 @@ def _chi2_newton_slice(xp_sorted: np.ndarray, xm_sorted: np.ndarray,
     cm = chi_m_init if chi_m_init > 0 else 1.0
 
     for _ in range(MAX_IT_CHI):
-        f1 = 0.0; f2 = 0.0
-        j11 = 0.0; j12 = 0.0
-        j21 = 0.0; j22 = 0.0
+        f1 = 0.0
+        f2 = 0.0
+        j11 = 0.0
+        j12 = 0.0
+        j21 = 0.0
+        j22 = 0.0
 
         for i in range(a0, a1):
-            xpi = xp_sorted[i]; xmi = xm_sorted[i]
+            xpi = xp_sorted[i]
+            xmi = xm_sorted[i]
             j_start = i+1 if (same_block and b0 == a0) else b0
             for j in range(j_start, b1):
                 tp = xpi * xp_sorted[j]

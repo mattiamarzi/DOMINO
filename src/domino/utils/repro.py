@@ -38,10 +38,12 @@ Notes
   avoid configuring handlers themselves.
 """
 from __future__ import annotations
+
+import logging
 import random
 from typing import Optional, Tuple, Union
+
 import numpy as np
-import logging
 
 Number = Union[int, np.integer]
 
