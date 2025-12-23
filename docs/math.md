@@ -25,9 +25,9 @@ Parameters are block probabilities $p_{rs} \in (0,1)$. The log-likelihood is
 $$
 \log L
 = \sum_{r \le s}
-\left[
+[
 L_{rs} \log p_{rs} + (M_{rs} - L_{rs}) \log(1 - p_{rs})
-\right].
+].
 $$
 
 ## Degree-corrected binary SBM
@@ -42,7 +42,11 @@ $$
 The Bernoulli log-likelihood is
 
 $$
-\log L = \sum_{i<j}\left[ A_{ij}\log p_{ij} + (1-A_{ij})\log(1-p_{ij})\right].
+\log L 
+= \sum_{i<j}
+[ 
+A_{ij}\log p_{ij} + (1-A_{ij})\log(1-p_{ij})
+].
 $$
 
 ## Signed SBM
@@ -117,7 +121,10 @@ and the corresponding dyad log-likelihood is
 
 $$
 \log L
-= \sum_{i<j}\left[ w_{ij}\log z_{ij} - (w_{ij}+1)\log(1+z_{ij})\right].
+= \sum_{i<j}
+[
+w_{ij}\log z_{ij} - (w_{ij}+1)\log(1+z_{ij})
+].
 $$
 
 ## Bayesian Information Criterion
