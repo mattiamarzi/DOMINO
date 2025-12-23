@@ -1,4 +1,4 @@
-# Leiden + BIC — API Quick Reference (Copy‑Paste Friendly)
+# Leiden + BIC — API Quick Reference
 
 > This page documents exactly the functions you’ll call most often, all parameters you might tweak,
 > and our recommended defaults. It also clarifies the automatic guards/coercions performed by the
@@ -33,8 +33,6 @@ detect(
     Aneg=None,
     degree_corrected=False,
     initial_partition=None,
-    theta=0.0,
-    gamma=0.0,
     max_outer=5,
     do_macro_merge=False,
     target_K=None,
