@@ -54,7 +54,7 @@ bic = res["bic"]
 - `max_outer`: maximum number of outer iterations of the alternating scheme.
 - `theta`, `gamma`: Leiden resolution parameters, set to `0.0` in most BIC runs.
 - `target_K`: if provided, attempts to select a partition with exactly `K`
-  communities.
+  blocks.
 - `viz`, `report`: booleans or dictionaries enabling optional post-processing.
 
 ## Output

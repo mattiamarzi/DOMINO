@@ -2,8 +2,8 @@
 
 This note summarizes the likelihoods and BIC expressions used by DOMINO.
 
-Let $N$ be the number of nodes, $B$ the number of communities, and $c_i \in \{1,\dots,B\}$
-the community label of node $i$. For each pair of communities $(r,s)$, define:
+Let $N$ be the number of nodes, $B$ the number of blocks, and $c_i \in \{1,\dots,B\}$
+the block label of node $i$. For each pair of blocks $(r,s)$, define:
 - $L_{rs}$, the number of observed edges between $r$ and $s$,
 - $M_{rs}$, the number of possible dyads between $r$ and $s$.
 
@@ -76,7 +76,7 @@ At block level, the geometric log-likelihood can be written as
 \log L = \sum_{r \le s}
 \Big[ W_{rs} \log z_{rs} - (W_{rs} + M_{rs}) \log(1 + z_{rs}) \Big],
 \end{equation}
-where $W_{rs}$ is the total weight between communities $r$ and $s$.
+where $W_{rs}$ is the total weight between blocks $r$ and $s$.
 
 ## Weighted degree-corrected SBM
 

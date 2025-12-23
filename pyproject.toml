@@ -16,7 +16,7 @@ dependencies = [
   "scipy>=1.10",
   "numba>=0.57",
 ]
-keywords = ["networks", "community-detection", "sbm", "leiden", "bic"]
+keywords = ["networks", "mesoscales", "mesoscale-detection", "sbm", "leiden", "bic"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "License :: OSI Approved :: MIT License",

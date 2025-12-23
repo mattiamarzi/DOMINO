@@ -1,6 +1,6 @@
-# DOMINO, Leiden + BIC community detection
+# DOMINO, Leiden + BIC mesoscale detection
 
-DOMINO is a community detection framework that combines **Leiden optimization**
+DOMINO is a mesoscale detection framework that combines **Leiden optimization**
 with **Bayesian Information Criterion (BIC) minimization** under several
 Stochastic Block Model (SBM) likelihoods.
 
