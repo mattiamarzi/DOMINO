@@ -43,7 +43,7 @@ The Bernoulli log-likelihood is
 
 $$
 \log L 
-= \sum_{i<j}
+= \sum_{i \le j}
 [ 
 A_{ij}\log p_{ij} + (1-A_{ij})\log(1-p_{ij})
 ].
@@ -121,7 +121,7 @@ and the corresponding dyad log-likelihood is
 
 $$
 \log L
-= \sum_{i<j}
+= \sum_{i \le j}
 [
 w_{ij}\log z_{ij} - (w_{ij}+1)\log(1+z_{ij})
 ].
