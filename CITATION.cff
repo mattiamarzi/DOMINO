@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it."
+title: "DOMINO: Detection Of MesoscopIc structures via iNfOrmation criteria"
+authors:
+  - family-names: "Marzi"
+    given-names: "Mattia"
+version: "0.1.0"
+date-released: "2025-12-22"
+license: "MIT"
+repository-code: "https://github.com/<YOUR-USER>/<YOUR-REPO>"
+keywords:
+  - community detection
+  - Leiden
+  - BIC
+  - stochastic block model
+  - signed networks
+  - weighted networks
+preferred-citation:
+  type: manuscript
+  title: "DOMINO: Detection Of MesoscopIc structures via iNfOrmation criteria"
+  authors:
+    - family-names: "Marzi"
+      given-names: "Mattia"
+  year: 2025
+  notes: "Manuscript in preparation. Update this entry when the paper is public (arXiv/DOI)."

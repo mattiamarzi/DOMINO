@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Numba cache
+*.nbc
+*.nbi
+
+# Jupyter
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+__MACOSX/
+
+# build artifacts
+build/
+dist/
+*.egg-info/
+
+# virtual env
+.venv/
+venv/
