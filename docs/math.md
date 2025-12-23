@@ -25,9 +25,9 @@ Parameters are block probabilities $p_{rs} \in (0,1)$. The log-likelihood is
 $$
 \log L
 = \sum_{r \le s}
-\Big[
+[
 L_{rs} \log p_{rs} + (M_{rs} - L_{rs}) \log(1 - p_{rs})
-\Big].
+].
 $$
 
 ## Degree-corrected binary SBM
@@ -42,7 +42,7 @@ $$
 The Bernoulli log-likelihood is
 
 $$
-\log L = \sum_{i<j}\Big[ A_{ij}\log p_{ij} + (1-A_{ij})\log(1-p_{ij}) \Big].
+\log L = \sum_{i<j}[ A_{ij}\log p_{ij} + (1-A_{ij})\log(1-p_{ij})].
 $$
 
 ## Signed SBM
@@ -64,11 +64,11 @@ The log-likelihood is
 $$
 \log L
 = \sum_{r \le s}
-\Big[
+[
 L^+_{rs}\log p^+_{rs}
 + L^-_{rs}\log p^-_{rs}
 + L^0_{rs}\log p^0_{rs}
-\Big].
+].
 $$
 
 ## Signed degree-corrected SBM
@@ -98,9 +98,9 @@ At block level, the geometric log-likelihood can be written as
 $$
 \log L
 = \sum_{r \le s}
-\Big[
+[
 W_{rs}\log z_{rs} - (W_{rs} + M_{rs})\log(1+z_{rs})
-\Big],
+],
 $$
 
 where $W_{rs}$ is the total weight between blocks $r$ and $s$.
@@ -117,7 +117,7 @@ and the corresponding dyad log-likelihood is
 
 $$
 \log L
-= \sum_{i<j}\Big[ w_{ij}\log z_{ij} - (w_{ij}+1)\log(1+z_{ij}) \Big].
+= \sum_{i<j}[ w_{ij}\log z_{ij} - (w_{ij}+1)\log(1+z_{ij})].
 $$
 
 ## Bayesian Information Criterion
