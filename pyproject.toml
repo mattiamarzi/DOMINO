@@ -34,8 +34,8 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/<YOUR-USER>/<YOUR-REPO>"
-Repository = "https://github.com/<YOUR-USER>/<YOUR-REPO>"
+Homepage = "https://github.com/mattiamarzi/DOMINO"
+Repository = "https://github.com/mattiamarzi/DOMINO"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
