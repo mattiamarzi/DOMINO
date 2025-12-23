@@ -13,9 +13,10 @@ The recommended public entry point is `detect`.
 
 ## Installation
 
-Editable install (development):
+Install from PyPI:
 ```bash
-python -m pip install -e ".[viz]"
+pip install domino-mesoscale
+from domino import detect
 ```
 
 Run tests:

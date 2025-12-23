@@ -1,5 +1,13 @@
 # Usage
 
+## Installation
+
+Install from PyPI:
+```bash
+pip install domino-mesoscale
+from domino import detect
+```
+
 ## Public API
 
 DOMINO exposes two user-facing functions:
