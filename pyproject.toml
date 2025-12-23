@@ -9,7 +9,7 @@ description = "DOMINO, Detection Of MesoscopIc structures via iNfOrmation criter
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
-authors = [{ name = "Mattia Marzi" }]
+authors = [{ name = "Mattia Marzi", email = "mattia.marzi@imtlucca.it" }]
 dependencies = [
   "numpy>=1.23",
   "networkx>=3.0",
