@@ -7,7 +7,7 @@ authors:
 version: "0.1.0"
 date-released: "2025-12-22"
 license: "MIT"
-repository-code: "https://github.com/<YOUR-USER>/<YOUR-REPO>"
+repository-code: "https://github.com/mattiamarzi/DOMINO"
 keywords:
   - community detection
   - Leiden
@@ -22,4 +22,4 @@ preferred-citation:
     - family-names: "Marzi"
       given-names: "Mattia"
   year: 2025
-  notes: "Manuscript in preparation. Update this entry when the paper is public (arXiv/DOI)."
+  notes: "Manuscript in preparation."
